@@ -14,6 +14,7 @@ class VoiceAgent {
         this.hasGreeted = false;
         this.isHoldingSpace = false;
         this.isVADProcessing = false;
+        this.isMutedByUser = false;
 
         // WebSocket reconnect state
         this.ws = null;
@@ -76,7 +77,8 @@ class VoiceAgent {
         }
 
         this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true;
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        this.recognition.continuous = !isAndroid; // Disable continuous on Android to prevent duplication bugs
         this.recognition.interimResults = true;
         this.recognition.lang = 'en-US';
         this.currentTranscript = '';
@@ -85,6 +87,12 @@ class VoiceAgent {
             this.isListening = true;
             this.updateStatus("Live Connection");
             if (this.toggleMicBtn) this.toggleMicBtn.classList.remove('muted');
+            
+            // Android UI State sync
+            if (isAndroid) {
+                this.updateVisLabel("Listening...");
+                if (window.WaveEngine) window.WaveEngine.setListening(true);
+            }
         };
 
         this.recognition.onresult = (event) => {
@@ -128,6 +136,13 @@ class VoiceAgent {
             // currently speaking. Previously this label stomped the "Transmitting"
             // label mid-speech because onend fires right after recognition.stop().
             if (!this.isSpeaking && !this.isProcessing && !this.isVADProcessing) {
+                if (this.isMutedByUser) {
+                    this.updateVisLabel("Muted");
+                    if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
+                    if (window.WaveEngine) window.WaveEngine.setListening(false);
+                    return;
+                }
+
                 this.updateVisLabel("Ready");
                 
                 // Android-specific: Native VAD fallback
@@ -233,14 +248,23 @@ class VoiceAgent {
             this.toggleMicBtn.addEventListener('click', () => {
                 const isAndroid = /Android/i.test(navigator.userAgent);
                 if (isAndroid) {
-                    if (this.isListening) {
-                        try { this.recognition.stop(); } catch(e){}
+                    if (this.isMutedByUser) {
+                        // Unmute
+                        this.isMutedByUser = false;
+                        this.toggleMicBtn.classList.remove('muted');
+                        if (!this.isSpeaking && !this.isProcessing) {
+                            this.updateVisLabel("Listening...");
+                            try { this.recognition.start(); } catch(e){}
+                        } else {
+                            this.updateVisLabel(this.isSpeaking ? "Speaking" : "Processing");
+                        }
+                    } else {
+                        // Mute
+                        this.isMutedByUser = true;
                         this.toggleMicBtn.classList.add('muted');
                         this.updateVisLabel("Muted");
-                    } else {
-                        try { this.recognition.start(); } catch(e){}
-                        this.toggleMicBtn.classList.remove('muted');
-                        this.updateVisLabel("Listening...");
+                        try { this.recognition.stop(); } catch(e){}
+                        if (window.WaveEngine) window.WaveEngine.setListening(false);
                     }
                     return;
                 }
@@ -263,7 +287,9 @@ class VoiceAgent {
         const isAndroid = /Android/i.test(navigator.userAgent);
         if (isAndroid) {
             console.log("Android detected. Skipping VAD to prevent microphone lock conflict.");
-            this.startRecognitionSession();
+            if (!this.isSpeaking && !this.isProcessing && !this.isMutedByUser) {
+                this.startRecognitionSession();
+            }
             return;
         }
 
@@ -498,8 +524,14 @@ class VoiceAgent {
             if (window.WaveEngine) window.WaveEngine.setSpeaking(false);
             // Only update label if not already processing a follow-up
             if (!this.isProcessing) {
-                this.updateVisLabel("Ready");
-                this.startRecognitionSession();
+                if (this.isMutedByUser) {
+                    this.updateVisLabel("Muted");
+                    if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
+                    if (window.WaveEngine) window.WaveEngine.setListening(false);
+                } else {
+                    this.updateVisLabel("Ready");
+                    this.startRecognitionSession();
+                }
             }
         };
 
@@ -510,8 +542,14 @@ class VoiceAgent {
             this.isSpeaking = false;
             if (window.WaveEngine) window.WaveEngine.setSpeaking(false);
             if (!this.isProcessing) {
-                this.updateVisLabel("Ready");
-                this.startRecognitionSession();
+                if (this.isMutedByUser) {
+                    this.updateVisLabel("Muted");
+                    if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
+                    if (window.WaveEngine) window.WaveEngine.setListening(false);
+                } else {
+                    this.updateVisLabel("Ready");
+                    this.startRecognitionSession();
+                }
             }
         };
 
