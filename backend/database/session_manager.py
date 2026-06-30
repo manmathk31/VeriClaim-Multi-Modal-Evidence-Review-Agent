@@ -496,7 +496,7 @@ class SessionManager:
             self._supabase.table("admin_action_logs").delete().eq("user_id", user_id).execute()
             
             # Evict from in-memory cache immediately
-            self.remove_user_session(user_id)
+            self.evict_cache(user_id)
             
             # Delete local agent memory folder for this user if it exists
             user_memory_dir = f"./crewai_memory/{user_id}"
@@ -543,7 +543,7 @@ class SessionManager:
             self._supabase.table("notifications").delete().eq("user_id", user_id).execute()
             
             # Evict from in-memory cache to force a fresh DB pull next time
-            self.remove_user_session(user_id)
+            self.evict_cache(user_id)
             
             # Delete local agent memory folder for this user if it exists
             user_memory_dir = f"./crewai_memory/{user_id}"
