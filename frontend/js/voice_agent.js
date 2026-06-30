@@ -128,7 +128,23 @@ class VoiceAgent {
             // label mid-speech because onend fires right after recognition.stop().
             if (!this.isSpeaking && !this.isProcessing && !this.isVADProcessing) {
                 this.updateVisLabel("Ready");
-                try { this.recognition.start(); } catch (err) { }
+                
+                // Android-specific: Native VAD fallback
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                if (isAndroid) {
+                    const combined = (this.currentTranscript + ' ' + (this.interimTranscript || '')).trim();
+                    if (combined !== '') {
+                        this.addUserMsg(combined);
+                        this.processUserMessage(combined);
+                        this.currentTranscript = '';
+                        this.interimTranscript = '';
+                    } else {
+                        // Keep listening
+                        this.startRecognitionSession();
+                    }
+                } else {
+                    try { this.recognition.start(); } catch (err) { }
+                }
             }
         };
     }
@@ -202,10 +218,24 @@ class VoiceAgent {
 
         if (this.toggleMicBtn) {
             this.toggleMicBtn.addEventListener('click', () => {
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                if (isAndroid) {
+                    if (this.isListening) {
+                        try { this.recognition.stop(); } catch(e){}
+                        this.toggleMicBtn.classList.add('muted');
+                        this.updateVisLabel("Muted");
+                    } else {
+                        try { this.recognition.start(); } catch(e){}
+                        this.toggleMicBtn.classList.remove('muted');
+                        this.updateVisLabel("Listening...");
+                    }
+                    return;
+                }
+                
                 if (!this.vad) return;
                 if (this.toggleMicBtn.classList.contains('muted')) {
                     this.vad.start();
-                    this.toggleMicBtn.classList.remove('muted');Y
+                    this.toggleMicBtn.classList.remove('muted');
                     this.updateVisLabel("Listening...");
                 } else {
                     this.vad.pause();
@@ -217,6 +247,13 @@ class VoiceAgent {
     }
 
     async setupVAD() {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            console.log("Android detected. Skipping VAD to prevent microphone lock conflict.");
+            this.startRecognitionSession();
+            return;
+        }
+
         if (typeof vad === 'undefined' || !vad.MicVAD) {
             console.warn("VAD library not loaded yet.");
             this.addSystemMsg("Voice detection unavailable. Please refresh the page.");
