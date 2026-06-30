@@ -27,6 +27,17 @@ class SessionManager:
         # Structure: { "user-uuid": { "conversation_id": "...", "conversation": [...], "images": [...], "claim_submitted": bool } }
         self._cache = {}
 
+    def _safe_execute(self, query):
+        """Executes a Supabase query with automatic retry if the HTTP/2 connection is dropped."""
+        try:
+            return query.execute()
+        except Exception as e:
+            err_str = str(e)
+            if any(term in err_str for term in ["ConnectionTerminated", "RemoteProtocolError", "last_stream_id"]):
+                print(f"[SESSION] Connection dropped by Supabase. Re-executing query: {err_str}")
+                return query.execute()
+            raise e
+
     # ══════════════════════════════════════════
     # CONVERSATION LIFECYCLE
     # ══════════════════════════════════════════
@@ -476,24 +487,24 @@ class SessionManager:
     def delete_user(self, user_id: str):
         try:
             # 1. Destroy data explicitly to avoid Foreign Key constraint blocks
-            conv_res = self._supabase.table("conversations").select("id").eq("user_id", user_id).execute()
+            conv_res = self._safe_execute(self._supabase.table("conversations").select("id").eq("user_id", user_id))
             for c in (conv_res.data or []):
                 conv_id = c["id"]
                 # A. Delete storage files
-                ev_res = self._supabase.table("evidence").select("storage_path").eq("conversation_id", conv_id).execute()
+                ev_res = self._safe_execute(self._supabase.table("evidence").select("storage_path").eq("conversation_id", conv_id))
                 files_to_delete = [ev["storage_path"] for ev in (ev_res.data or []) if ev.get("storage_path")]
                 if files_to_delete:
                     self._supabase.storage.from_("evidence").remove(files_to_delete)
                 # B. Explicitly delete evidence DB rows
-                self._supabase.table("evidence").delete().eq("conversation_id", conv_id).execute()
+                self._safe_execute(self._supabase.table("evidence").delete().eq("conversation_id", conv_id))
                 # C. Explicitly delete messages DB rows
-                self._supabase.table("messages").delete().eq("conversation_id", conv_id).execute()
+                self._safe_execute(self._supabase.table("messages").delete().eq("conversation_id", conv_id))
                 
-            self._supabase.table("conversations").delete().eq("user_id", user_id).execute()
-            self._supabase.table("claims").delete().eq("user_id", user_id).execute()
-            self._supabase.table("policies").delete().eq("id", user_id).execute()
-            self._supabase.table("notifications").delete().eq("user_id", user_id).execute()
-            self._supabase.table("admin_action_logs").delete().eq("user_id", user_id).execute()
+            self._safe_execute(self._supabase.table("conversations").delete().eq("user_id", user_id))
+            self._safe_execute(self._supabase.table("claims").delete().eq("user_id", user_id))
+            self._safe_execute(self._supabase.table("policies").delete().eq("id", user_id))
+            self._safe_execute(self._supabase.table("notifications").delete().eq("user_id", user_id))
+            self._safe_execute(self._supabase.table("admin_action_logs").delete().eq("user_id", user_id))
             
             # Evict from in-memory cache immediately
             self.evict_cache(user_id)
@@ -510,11 +521,11 @@ class SessionManager:
             self._supabase.auth.admin.delete_user(user_id)
             
             try:
-                self._supabase.table("admin_action_logs").insert({
+                self._safe_execute(self._supabase.table("admin_action_logs").insert({
                     "user_id": user_id,
                     "action_type": "Delete",
                     "reason": "Account completely purged."
-                }).execute()
+                }))
             except:
                 pass
             return {"status": "success"}
@@ -524,23 +535,23 @@ class SessionManager:
     def clear_user_data(self, user_id: str):
         try:
             # Destroy data without deleting auth account explicitly to avoid FK errors
-            conv_res = self._supabase.table("conversations").select("id").eq("user_id", user_id).execute()
+            conv_res = self._safe_execute(self._supabase.table("conversations").select("id").eq("user_id", user_id))
             for c in (conv_res.data or []):
                 conv_id = c["id"]
                 # A. Delete storage files
-                ev_res = self._supabase.table("evidence").select("storage_path").eq("conversation_id", conv_id).execute()
+                ev_res = self._safe_execute(self._supabase.table("evidence").select("storage_path").eq("conversation_id", conv_id))
                 files_to_delete = [ev["storage_path"] for ev in (ev_res.data or []) if ev.get("storage_path")]
                 if files_to_delete:
                     self._supabase.storage.from_("evidence").remove(files_to_delete)
                 # B. Explicitly delete evidence DB rows
-                self._supabase.table("evidence").delete().eq("conversation_id", conv_id).execute()
+                self._safe_execute(self._supabase.table("evidence").delete().eq("conversation_id", conv_id))
                 # C. Explicitly delete messages DB rows
-                self._supabase.table("messages").delete().eq("conversation_id", conv_id).execute()
+                self._safe_execute(self._supabase.table("messages").delete().eq("conversation_id", conv_id))
                 
-            self._supabase.table("conversations").delete().eq("user_id", user_id).execute()
-            self._supabase.table("claims").delete().eq("user_id", user_id).execute()
-            self._supabase.table("policies").update({"past_claims": 0}).eq("id", user_id).execute()
-            self._supabase.table("notifications").delete().eq("user_id", user_id).execute()
+            self._safe_execute(self._supabase.table("conversations").delete().eq("user_id", user_id))
+            self._safe_execute(self._supabase.table("claims").delete().eq("user_id", user_id))
+            self._safe_execute(self._supabase.table("policies").update({"past_claims": 0}).eq("id", user_id))
+            self._safe_execute(self._supabase.table("notifications").delete().eq("user_id", user_id))
             
             # Evict from in-memory cache to force a fresh DB pull next time
             self.evict_cache(user_id)
@@ -554,11 +565,11 @@ class SessionManager:
                     print(f"Warning: could not delete memory dir for {user_id}: {mem_err}")
             
             try:
-                self._supabase.table("admin_action_logs").insert({
+                self._safe_execute(self._supabase.table("admin_action_logs").insert({
                     "user_id": user_id,
                     "action_type": "Clear Data",
                     "reason": "Admin wiped all user claim data for testing/reset."
-                }).execute()
+                }))
             except:
                 pass
             return {"status": "success"}
