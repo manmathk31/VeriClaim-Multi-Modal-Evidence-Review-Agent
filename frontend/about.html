@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="About VeriClaim — The world's first autonomous voice agentic claims platform powered by CrewAI and Gemini."/>
+    <title>VeriClaim — About Us</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
+</head>
+<body class="antialiased selection:bg-cyan-500/30 selection:text-cyan-200 bg-slate-50 text-slate-900 dark:bg-[#030303] dark:text-white transition-colors duration-300">
+
+    <div class="ambient-mesh"></div>
+
+    <!-- Header -->
+    <nav class="w-full px-4 md:px-8 py-4 md:py-6 flex justify-between items-center fixed top-0 z-50 bg-white/70 dark:bg-black/40 backdrop-blur-md border-b border-slate-200 dark:border-white/5">
+        <div class="flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
+            <a href="home.html" class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">VeriClaim</a>
+        </div>
+        <div class="flex gap-4 md:gap-6 items-center">
+            <a href="home.html" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest font-medium hidden md:inline">Home</a>
+            <a href="dashboard.html" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest font-medium hidden md:inline">Dashboard</a>
+            <button onclick="toggleTheme()" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center gap-2" title="Toggle Theme">
+                <i class="fa-solid fa-sun" id="themeIcon"></i>
+            </button>
+            <button onclick="toggleMobileMenu()" class="md:hidden text-slate-700 dark:text-white text-lg ml-2 focus:outline-none">
+                <i class="fa-solid fa-bars" id="mobileMenuIcon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Navigation Menu -->
+    <div id="mobileMenu" class="fixed inset-0 top-[60px] bg-white/95 dark:bg-[#030303]/95 backdrop-blur-xl z-40 hidden flex-col items-center pt-16 gap-8 border-t border-slate-200 dark:border-white/5 transition-opacity">
+        <a href="home.html" class="text-sm text-slate-700 dark:text-gray-200 uppercase tracking-widest font-medium">Home</a>
+        <a href="dashboard.html" class="text-sm text-slate-700 dark:text-gray-200 uppercase tracking-widest font-medium">Dashboard</a>
+    </div>
+
+    <!-- Hero -->
+    <main class="pt-32 pb-20 px-8 max-w-5xl mx-auto relative z-10">
+
+        <!-- Title -->
+        <div class="text-center mb-20">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 mb-6">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
+                <span class="text-[10px] uppercase tracking-widest text-slate-600 dark:text-gray-300">About the Platform</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-light tracking-tight mb-6">
+                Building the future of <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-indigo-600 dark:from-cyan-400 dark:to-indigo-500 font-semibold">autonomous claims.</span>
+            </h1>
+            <p class="text-lg text-slate-600 dark:text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
+                VeriClaim is a B2B2C autonomous claims agentic platform that replaces traditional call centers with a multi-agent AI system capable of interviewing, analyzing evidence, detecting fraud, and delivering verdicts — all in real time.
+            </p>
+        </div>
+
+        <!-- Mission -->
+        <section class="mb-20">
+            <div class="glass-card rounded-2xl p-10 md:p-14">
+                <h2 class="text-2xl font-light tracking-tight mb-4 text-cyan-600 dark:text-cyan-400">Our Mission</h2>
+                <p class="text-slate-600 dark:text-gray-400 font-light leading-relaxed text-lg">
+                    Insurance claims shouldn't take weeks. They shouldn't require 40-minute hold times or endless paperwork. We believe every claim deserves instant, fair, and transparent processing — powered by AI agents that work together like a real team of experts.
+                </p>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="mb-20">
+            <h2 class="text-2xl font-light tracking-tight mb-8 text-center text-indigo-600 dark:text-indigo-400">The Multi-Agent Architecture</h2>
+            <p class="text-sm text-slate-500 dark:text-gray-400 text-center max-w-xl mx-auto font-light mb-10">
+                VeriClaim orchestrates 6 specialized AI agents in a hierarchical pipeline. Each agent has a distinct role, tools, and personality.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="glass-card rounded-2xl p-7">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-cyan-50 dark:bg-cyan-400/10 mb-4">
+                        <i class="fa-solid fa-headset text-cyan-600 dark:text-cyan-400"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Voice Orchestrator</h3>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Conducts empathetic, human-like interviews. Gathers the full claim story with natural conversation flow.</p>
+                </div>
+                <div class="glass-card rounded-2xl p-7">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-400/10 mb-4">
+                        <i class="fa-solid fa-shield-halved text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Policy Triage Agent</h3>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Queries the database to verify coverage tier, active status, and risk flags before processing.</p>
+                </div>
+                <div class="glass-card rounded-2xl p-7">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-50 dark:bg-purple-400/10 mb-4">
+                        <i class="fa-solid fa-eye text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Vision Analyst</h3>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Performs forensic image analysis using Gemini Vision API. Detects tampering, stock photos, and damage severity.</p>
+                </div>
+        <!-- Multi-Agent Grid -->
+        <section class="mb-20 reveal">
+            <h2 class="text-2xl font-light tracking-tight mb-8 text-center text-indigo-600 dark:text-indigo-400">The Autonomous Pipeline</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                
+                <!-- Agent 1 -->
+                <div class="glass-card tilt-card rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 font-bold">1</span>
+                            <i class="fa-solid fa-microphone-lines text-cyan-600 dark:text-cyan-400"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Voice Reception Agent</h3>
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Engages the claimant in natural conversation, extracting key facts, dates, and incident details dynamically.</p>
+                    </div>
+                </div>
+
+                <!-- Agent 2 -->
+                <div class="glass-card tilt-card rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 font-bold">2</span>
+                            <i class="fa-solid fa-eye text-blue-600 dark:text-blue-400"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Vision Analyst</h3>
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Uses Gemini Vision to inspect uploaded evidence, verifying authenticity and assessing damage severity automatically.</p>
+                    </div>
+                </div>
+
+                <!-- Agent 3 -->
+                <div class="glass-card tilt-card rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 font-bold">3</span>
+                            <i class="fa-solid fa-shield-halved text-purple-600 dark:text-purple-400"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Fraud Detective</h3>
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Cross-references the transcript and vision assessment against policy rules to flag discrepancies or potential fraud.</p>
+                    </div>
+                </div>
+
+                <!-- Agent 4 -->
+                <div class="glass-card tilt-card rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold">4</span>
+                            <i class="fa-solid fa-file-contract text-emerald-600 dark:text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-800 dark:text-white mb-2">Final Assessor</h3>
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light leading-relaxed">Synthesizes all agent reports into a final ruling (Approved, Denied, or Escalate) and stores it in the database.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How To Use -->
+        <section class="mb-20 reveal">
+            <h2 class="text-2xl font-light tracking-tight mb-8 text-center text-green-600 dark:text-green-400">How to Use VeriClaim</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                
+                <!-- Step 1 -->
+                <div class="glass-card tilt-card rounded-2xl p-8 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-xl group-hover:bg-green-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 font-bold">1</span>
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Start the Voice Agent</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">
+                            Navigate to the Home page and click "Start Conversation". Allow microphone permissions. Speak naturally about your incident, just like you would to a human agent.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="glass-card tilt-card rounded-2xl p-8 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 font-bold">2</span>
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Provide Evidence</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">
+                            If requested by the agent, click the <i class="fa-solid fa-paperclip mx-1 text-slate-500"></i> paperclip icon to upload photos of the damage, invoices, or police reports.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="glass-card tilt-card rounded-2xl p-8 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold">3</span>
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Finalize Claim</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">
+                            Once the agent says it has enough information, it will summarize the claim. You can then say "Submit" to send it to the backend assessors.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="glass-card tilt-card rounded-2xl p-8 relative overflow-hidden group">
+                    <div class="tilt-content">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-colors"></div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 font-bold">4</span>
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Track Progress</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">
+                            Go to your <a href="dashboard.html" class="text-purple-500 hover:underline font-medium">Dashboard</a> to view the live status of your claim, read the Final Assessor's verdict, and review past history.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Tech Stack -->
+        <section class="mb-20 reveal">
+            <h2 class="text-2xl font-light tracking-tight mb-8 text-center text-cyan-600 dark:text-cyan-400">Technology Stack</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <i class="fa-solid fa-robot text-2xl text-cyan-600 dark:text-cyan-400 mb-3"></i>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-800 dark:text-white">CrewAI</p>
+                    <p class="text-[10px] text-slate-400 dark:text-gray-500 mt-1">Agent Orchestration</p>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <i class="fa-solid fa-brain text-2xl text-indigo-600 dark:text-indigo-400 mb-3"></i>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-800 dark:text-white">Gemini</p>
+                    <p class="text-[10px] text-slate-400 dark:text-gray-500 mt-1">LLM & Vision</p>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <i class="fa-solid fa-database text-2xl text-emerald-600 dark:text-emerald-400 mb-3"></i>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-800 dark:text-white">Supabase</p>
+                    <p class="text-[10px] text-slate-400 dark:text-gray-500 mt-1">Auth & Database</p>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <i class="fa-solid fa-bolt text-2xl text-amber-600 dark:text-amber-400 mb-3"></i>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-800 dark:text-white">FastAPI</p>
+                    <p class="text-[10px] text-slate-400 dark:text-gray-500 mt-1">Backend Engine</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="text-center">
+            <div class="glass-card rounded-2xl p-12">
+                <h2 class="text-2xl font-light tracking-tight mb-4 text-slate-800 dark:text-white">Ready to experience autonomous claims?</h2>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8 max-w-lg mx-auto">File your first claim in under 2 minutes. No forms, no hold times, no hassle.</p>
+                <a href="dashboard.html" class="btn-glow px-8 py-4 rounded-full text-sm font-medium uppercase tracking-widest inline-flex items-center gap-3">
+                    Get Started <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-8 border-t border-slate-200 dark:border-white/5 text-center text-xs text-slate-500 dark:text-gray-500 uppercase tracking-widest mt-auto w-full">
+        &copy; 2026 VeriClaim AI. Autonomous Claims Desk.
+    </footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const icon = document.getElementById('mobileMenuIcon');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-xmark');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+                icon.classList.remove('fa-xmark');
+                icon.classList.add('fa-bars');
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.className = document.documentElement.classList.contains('dark') ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        window.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+    <script src="js/ui_enhancements.js"></script>
+</body>
+</html>

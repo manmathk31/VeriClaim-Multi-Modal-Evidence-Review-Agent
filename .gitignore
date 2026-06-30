@@ -1,0 +1,30 @@
+# Environment Variables
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and OS Files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Caching (from our vision pipeline)
+.cache/
+.chroma/
+*.db
+
+# Local storage and temporary files
+uploads/
+crewai_memory/
+*.sql
+dataset/

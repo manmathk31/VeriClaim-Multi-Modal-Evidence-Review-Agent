@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriClaim - Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        
+        /* Subtle Grid Background for Aesthetic */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(rgba(100, 116, 139, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100, 116, 139, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        html.dark .grid-bg {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        html.dark .glass-card {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s ease;
+        }
+        .sidebar-link:hover {
+            background: rgba(99, 102, 241, 0.05);
+            color: #4f46e5;
+        }
+        html.dark .sidebar-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+        }
+        .sidebar-link.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
+            font-weight: 500;
+        }
+        html.dark .sidebar-link.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex antialiased bg-slate-50 text-slate-900 dark:bg-[#060606] dark:text-white relative">
+    
+    <div class="grid-bg"></div>
+    
+    <!-- ═══════════════════════════════════ -->
+    <!-- INITIAL LOADING SCREEN -->
+    <!-- ═══════════════════════════════════ -->
+    <div id="initLoader" class="fixed inset-0 z-[300] flex items-center justify-center bg-slate-50 dark:bg-[#060606] transition-opacity duration-300">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-500"></i>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- SECRET LOGIN OVERLAY -->
+    <!-- ═══════════════════════════════════ -->
+    <div id="adminLoginOverlay" class="fixed inset-0 z-[200] flex items-center justify-center bg-slate-50 dark:bg-[#060606]">
+        <div class="glass-card w-full max-w-sm rounded-3xl p-10 flex flex-col items-center relative overflow-hidden shadow-2xl border border-slate-200 dark:border-white/10">
+            <div class="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
+            
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-6 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                <i class="fa-solid fa-lock text-indigo-600 dark:text-indigo-400 text-xl"></i>
+            </div>
+            
+            <h2 class="text-xl font-light tracking-tight mb-2 text-slate-900 dark:text-white">Restricted Access</h2>
+            <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-8 text-center">Master Console Login</p>
+            
+            <form id="adminLoginForm" class="w-full flex flex-col gap-4 relative z-10" onsubmit="handleAdminLogin(event)">
+                <input type="text" id="adminUser" placeholder="Identifier" class="w-full bg-slate-100 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-colors placeholder-slate-400 dark:placeholder-slate-600">
+                <input type="password" id="adminPass" placeholder="Passphrase" class="w-full bg-slate-100 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-colors placeholder-slate-400 dark:placeholder-slate-600">
+                
+                <p id="loginError" class="text-red-500 text-xs text-center hidden">Invalid credentials.</p>
+                
+                <button type="submit" id="loginBtn" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 text-xs font-semibold uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)]">
+                    Authenticate
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- SIDEBAR -->
+    <!-- ═══════════════════════════════════ -->
+    <aside class="w-64 h-full flex-shrink-0 border-r border-slate-200 dark:border-white/5 bg-white/70 dark:bg-black/40 backdrop-blur-md flex flex-col z-20 relative">
+        <div class="px-6 py-6 flex items-center gap-3 border-b border-slate-200 dark:border-white/5">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></span>
+            <span class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white">Admin Console</span>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 flex flex-col gap-2">
+            <button onclick="showSection('overview')" id="nav-overview" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Overview
+            </button>
+            <button onclick="showSection('claims')" id="nav-claims" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-layer-group w-5 text-center"></i> Claims Queue
+            </button>
+            <button onclick="showSection('users')" id="nav-users" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-users w-5 text-center"></i> Users
+            </button>
+            <button onclick="showSection('telemetry')" id="nav-telemetry" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-terminal w-5 text-center"></i> Live Telemetry
+            </button>
+            <button onclick="showSection('special')" id="nav-special" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors mt-auto mb-2">
+                <i class="fa-solid fa-triangle-exclamation w-5 text-center"></i> Special Access
+            </button>
+        </nav>
+
+        <div class="px-4 py-4 border-t border-slate-200 dark:border-white/5">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors uppercase tracking-widest">
+                <i class="fa-solid fa-right-from-bracket"></i> Log Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- MAIN CONTENT -->
+    <!-- ═══════════════════════════════════ -->
+    <main class="flex-1 h-full overflow-y-auto relative z-10 flex flex-col">
+        <!-- Header -->
+        <header class="flex justify-end items-center px-8 py-4 border-b border-slate-200 dark:border-white/5 bg-white/50 dark:bg-black/20 backdrop-blur-md sticky top-0 z-30">
+            <div class="flex items-center gap-6">
+                <!-- Status -->
+                <div class="flex items-center gap-2" id="telemetryStatusContainer">
+                    <span class="w-2 h-2 rounded-full bg-red-500" id="wsDot"></span>
+                    <span class="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-gray-400" id="wsLabel">Disconnected</span>
+                </div>
+                <div class="w-px h-4 bg-slate-200 dark:bg-white/10"></div>
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="text-slate-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors">
+                    <i class="fa-solid fa-sun" id="themeIcon"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="p-8 md:p-12 w-full max-w-7xl mx-auto flex-1">
+            
+            <!-- ── SECTION: OVERVIEW ── -->
+            <section id="section-overview" class="block">
+                <h1 class="text-3xl font-light tracking-tight mb-2">Platform Overview</h1>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8">High-level analytics and system health.</p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-10" id="statsContainer">
+                    <!-- Loaded via JS -->
+                    <div class="glass-card rounded-2xl p-6 text-center animate-pulse"><div class="h-8 bg-slate-200 dark:bg-white/10 rounded w-1/2 mx-auto mb-2"></div><div class="h-4 bg-slate-200 dark:bg-white/10 rounded w-1/3 mx-auto"></div></div>
+                </div>
+
+                <div class="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+                        <h2 class="text-sm font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-300">Action Required: Flagged Claims</h2>
+                    </div>
+                    <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-left border-collapse" id="flaggedTable">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-black/20">
+                                    <th class="px-6 py-3 font-medium">Claim ID</th>
+                                    <th class="px-6 py-3 font-medium">Title</th>
+                                    <th class="px-6 py-3 font-medium">User ID</th>
+                                    <th class="px-6 py-3 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100 dark:divide-white/5" id="flaggedTableBody">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: CLAIMS QUEUE ── -->
+            <section id="section-claims" class="hidden">
+                <h1 class="text-3xl font-light tracking-tight mb-2">Claims Queue</h1>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8">View and manage all claims across the platform.</p>
+                
+                <div class="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
+                    <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-black/20">
+                                    <th class="px-6 py-3 font-medium">Date</th>
+                                    <th class="px-6 py-3 font-medium">Title</th>
+                                    <th class="px-6 py-3 font-medium">Status</th>
+                                    <th class="px-6 py-3 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100 dark:divide-white/5" id="claimsTableBody">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: USERS ── -->
+            <section id="section-users" class="hidden">
+                <h1 class="text-3xl font-light tracking-tight mb-2">User Management</h1>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8">View active platform users.</p>
+                
+                <div class="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden max-w-5xl">
+                    <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-black/20">
+                                    <th class="px-6 py-3 font-medium">Name</th>
+                                    <th class="px-6 py-3 font-medium">Email</th>
+                                    <th class="px-6 py-3 font-medium text-center">Claims</th>
+                                    <th class="px-6 py-3 font-medium text-center">Status</th>
+                                    <th class="px-6 py-3 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100 dark:divide-white/5" id="usersTableBody">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: TELEMETRY ── -->
+            <section id="section-telemetry" class="hidden h-[85vh] flex flex-col -mt-4 md:-mt-8">
+                <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-4 gap-4">
+                    <div>
+                        <h1 class="text-3xl font-light tracking-tight mb-2">Live Agent Telemetry</h1>
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light">Real-time stream of backend AI orchestration. (Max 100 lines auto-pruning to preserve memory)</p>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <button onclick="clearTelemetry()" class="text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-4 py-2 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5">
+                            <i class="fa-solid fa-broom mr-2"></i> Clear Output
+                        </button>
+                        
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="streamToggle" class="sr-only peer" onchange="toggleTelemetryStream()">
+                            <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-white/10 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"></div>
+                            <span class="ml-3 text-xs font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">Stream ON</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex-1 bg-[#050505] rounded-2xl border border-slate-800 p-6 overflow-hidden flex flex-col font-mono text-[13px] leading-relaxed shadow-[0_0_50px_rgba(6,182,212,0.1)] relative group">
+                    <div class="absolute inset-0 bg-gradient-to-b from-cyan-900/10 to-transparent pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                    <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"></div>
+                    <div class="w-full flex-1 overflow-y-auto terminal-scroll pr-2 relative z-10 space-y-1.5" id="matrixTerminal">
+                        <div class="text-cyan-500/50 italic mb-4">VeriClaim Secure Agent Matrix v8.0</div>
+                        <div class="text-yellow-500/70 italic mb-4">> TELEMETRY STREAM PAUSED. Toggle ON to capture live orchestration.</div>
+                        <!-- Terminal Lines -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: SPECIAL ACCESS ── -->
+            <section id="section-special" class="hidden">
+                <h1 class="text-3xl font-light tracking-tight mb-2 text-red-600 dark:text-red-500">Special Access</h1>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8">Restricted operations for database pruning and emergency resets.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Agent Memory Card -->
+                    <div class="glass-card rounded-2xl p-6 border-t-4 border-t-red-500 flex flex-col">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                                <i class="fa-solid fa-brain text-red-600 dark:text-red-400"></i>
+                            </div>
+                            <h3 class="font-medium text-slate-900 dark:text-white">Wipe Agent Memory</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-gray-400 leading-relaxed mb-6 flex-1">
+                            Purges all persistent vectorized memory for CrewAI agents. The agents will lose their context of past cases, but will continue to process active claims perfectly based on their base instructions. Use this to free up database limits on the free tier.
+                        </p>
+                        <button onclick="executeSpecialAction('memory')" class="w-full py-2.5 rounded-xl text-xs font-semibold tracking-widest uppercase bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white border border-red-600/20 transition-all shadow-sm">
+                            Clear Memory Vault
+                        </button>
+                    </div>
+
+                    <!-- System Logs Card -->
+                    <div class="glass-card rounded-2xl p-6 border-t-4 border-t-orange-500 flex flex-col">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                                <i class="fa-solid fa-clipboard-list text-orange-600 dark:text-orange-400"></i>
+                            </div>
+                            <h3 class="font-medium text-slate-900 dark:text-white">Wipe System Logs</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-gray-400 leading-relaxed mb-6 flex-1">
+                            Deletes all historical records of admin overrides, manual verdicts, and account suspensions. This does NOT delete user claims or evidence files. The automated weekly cleanup will continue to prune these automatically, but this offers a full manual reset.
+                        </p>
+                        <button onclick="executeSpecialAction('logs')" class="w-full py-2.5 rounded-xl text-xs font-semibold tracking-widest uppercase bg-orange-600/10 text-orange-600 hover:bg-orange-600 hover:text-white border border-orange-600/20 transition-all shadow-sm">
+                            Clear Audit Logs
+                        </button>
+                    </div>
+
+                    <!-- Rate Limits Card -->
+                    <div class="glass-card rounded-2xl p-6 border-t-4 border-t-yellow-500 flex flex-col">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-yellow-50 dark:bg-yellow-500/10 flex items-center justify-center">
+                                <i class="fa-solid fa-shield-halved text-yellow-600 dark:text-yellow-400"></i>
+                            </div>
+                            <h3 class="font-medium text-slate-900 dark:text-white">Reset Rate Limits</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-gray-400 leading-relaxed mb-6 flex-1">
+                            Clears the in-memory rate limiter blocklist. If you or another legitimate user accidentally triggers the DDoS protection (HTTP 429 Too Many Requests) while rapidly testing, use this to instantly unblock all IP addresses.
+                        </p>
+                        <button onclick="executeSpecialAction('ratelimit')" class="w-full py-2.5 rounded-xl text-xs font-semibold tracking-widest uppercase bg-yellow-600/10 text-yellow-600 hover:bg-yellow-600 hover:text-white border border-yellow-600/20 transition-all shadow-sm">
+                            Reset Blocklist
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- MODALS -->
+    <!-- ═══════════════════════════════════ -->
+    
+    <!-- User Action Modal -->
+    <div id="userActionModal" class="fixed inset-0 z-[110] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUserActionModal()"></div>
+        <div class="glass-card w-full max-w-md rounded-2xl shadow-2xl relative z-10 flex flex-col m-4 overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+            
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-white/5" id="userActionHeader">
+                <h2 class="text-lg font-medium text-slate-900 dark:text-white" id="userActionTitle">Action</h2>
+                <button onclick="closeUserActionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-sm text-slate-600 dark:text-gray-300 mb-4" id="userActionDesc">Description</p>
+                
+                <div id="userActionReasonContainer">
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">Reason for Audit Log</label>
+                    <textarea id="userActionReason" class="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors dark:text-white" rows="3" placeholder="Explain the reason for this action..."></textarea>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-50 dark:bg-black/20 border-t border-slate-200 dark:border-white/5 flex justify-end gap-3">
+                <button onclick="closeUserActionModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors">Cancel</button>
+                <button id="confirmUserActionButton" onclick="executeUserAction()" class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Claim Detail Modal -->
+    <div id="claimModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeClaimModal()"></div>
+        <div class="glass-card w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl relative z-10 flex flex-col m-4 overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+            
+            <div class="px-8 py-5 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-white/5">
+                <div>
+                    <h2 class="text-xl font-medium text-slate-900 dark:text-white" id="modalTitle">Claim Details</h2>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-widest mt-1" id="modalId">ID: Loading...</p>
+                </div>
+                <button onclick="closeClaimModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-8 flex flex-col md:flex-row gap-8">
+                <!-- Left: Transcript -->
+                <div class="flex-1">
+                    <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-300 mb-4 border-b border-slate-200 dark:border-white/10 pb-2">Agent Transcript</h3>
+                    <div id="modalTranscript" class="space-y-4 max-h-96 overflow-y-auto pr-2 terminal-scroll text-sm">
+                        <!-- Messages -->
+                    </div>
+                </div>
+                
+                <!-- Right: Evidence & Actions -->
+                <div class="w-full md:w-72 flex flex-col gap-6 shrink-0">
+                    <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-300 mb-4 border-b border-slate-200 dark:border-white/10 pb-2">Evidence</h3>
+                        <div id="modalEvidence" class="flex flex-wrap gap-2">
+                            <!-- Images -->
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-300 mb-4 border-b border-slate-200 dark:border-white/10 pb-2">Admin Override</h3>
+                        <p class="text-xs text-slate-500 dark:text-gray-400 mb-4">Finalize the verdict for this claim. This will notify the user instantly.</p>
+                        
+                        <div class="flex flex-col gap-3">
+                            <button onclick="submitVerdict('approved')" class="w-full py-2.5 rounded-lg text-xs font-semibold tracking-widest uppercase bg-green-600/10 text-green-600 hover:bg-green-600 hover:text-white border border-green-600/20 transition-all shadow-sm">
+                                Approve Claim
+                            </button>
+                            <button onclick="submitVerdict('denied')" class="w-full py-2.5 rounded-lg text-xs font-semibold tracking-widest uppercase bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white border border-red-600/20 transition-all shadow-sm">
+                                Deny Claim
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/admin_dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="VeriClaim is the world's first B2B2C autonomous claim agentic platform. Orchestrated by 6 CrewAI agents to handle voice interviews, vision checks, policy lookups, and fraud detection instantly."/>
+    <title>VeriClaim - Autonomous Claims Agentic Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Theme Initializer -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+</head>
+<body class="antialiased selection:bg-cyan-500/30 selection:text-cyan-200 bg-slate-50 text-slate-900 dark:bg-[#030303] dark:text-white transition-colors duration-300">
+
+    <div class="ambient-mesh"></div>
+
+    <!-- Header -->
+    <nav class="w-full px-4 md:px-8 py-4 md:py-6 flex justify-between items-center fixed top-0 z-50 bg-white/70 dark:bg-black/40 backdrop-blur-md border-b border-slate-200 dark:border-white/5">
+        <div class="flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
+            <span class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white">VeriClaim</span>
+        </div>
+        <div class="flex gap-4 md:gap-6 items-center">
+            <a href="about.html" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest font-medium hidden md:inline">About</a>
+            
+            <button onclick="toggleTheme()" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center gap-2" title="Toggle Light/Dark Mode">
+                <i class="fa-solid fa-sun" id="themeIcon"></i>
+            </button>
+            
+            <div class="hidden md:block w-px h-4 bg-slate-200 dark:bg-white/10"></div>
+
+            <button id="authBtn" onclick="toggleAuthModal()" class="hidden md:block text-xs text-slate-700 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 uppercase tracking-widest transition-colors font-medium border border-slate-300 dark:border-white/20 px-4 py-2 rounded-full hover:border-cyan-500/50 dark:hover:border-cyan-400/50">
+                Log In
+            </button>
+            
+            <button onclick="toggleMobileMenu()" class="md:hidden text-slate-700 dark:text-white text-lg ml-2 focus:outline-none">
+                <i class="fa-solid fa-bars" id="mobileMenuIcon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Navigation Menu -->
+    <div id="mobileMenu" class="fixed inset-0 top-[60px] bg-white/95 dark:bg-[#030303]/95 backdrop-blur-xl z-40 hidden flex-col items-center pt-16 gap-8 border-t border-slate-200 dark:border-white/5 transition-opacity">
+        <a href="about.html" class="text-sm text-slate-700 dark:text-gray-200 uppercase tracking-widest font-medium">About</a>
+        <button onclick="toggleAuthModal(); toggleMobileMenu();" class="text-sm text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-medium border border-cyan-500/30 px-8 py-3 rounded-full">Log In</button>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-md transition-opacity">
+        <!-- Animated Gradient Border Wrapper -->
+        <div class="relative w-full max-w-md mx-4">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-2xl blur opacity-30 dark:opacity-50"></div>
+            <div class="glass-card p-10 rounded-2xl relative bg-white dark:bg-[#050505] shadow-2xl">
+                <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+                <h2 id="authTitle" class="text-3xl font-light mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-indigo-600 dark:from-cyan-400 dark:to-indigo-500">Welcome Back</h2>
+                <p id="authSubtitle" class="text-sm text-slate-500 dark:text-gray-400 mb-6 font-light">Sign in to your VeriClaim account.</p>
+                
+                <div id="authStatusMsg" class="text-cyan-700 dark:text-cyan-300 text-sm hidden p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800/30 mb-6 font-medium"></div>
+                
+                <form id="authForm" onsubmit="handleAuth(event)" class="flex flex-col gap-5">
+                    <div id="nameFieldContainer" class="hidden flex-col">
+                        <label class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-semibold mb-1">Full Name</label>
+                        <input type="text" id="nameInput" placeholder="John Doe" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all">
+                    </div>
+                    <div class="flex-col flex">
+                        <label class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-semibold mb-1">Email Address</label>
+                        <input type="email" id="emailInput" required placeholder="name@example.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all">
+                    </div>
+                    <div id="passwordFieldContainer" class="flex-col flex relative">
+                        <label class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-semibold mb-1">Password</label>
+                        <input type="password" id="passwordInput" placeholder="••••••••" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all">
+                        <button type="button" id="forgotPwdBtn" onclick="switchAuthMode('forgot_password')" class="absolute right-0 top-0 text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-medium">Forgot?</button>
+                    </div>
+                    <div id="errorMsg" class="text-red-600 dark:text-red-400 text-sm hidden p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30"></div>
+                    
+                    <button type="submit" id="authSubmitBtn" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 px-6 py-4 rounded-xl font-semibold uppercase tracking-widest mt-2 flex items-center justify-center gap-3 transition-all active:scale-[0.98]">
+                        <span id="authSubmitSpinner" class="btn-spinner hidden"></span>
+                        <span id="authSubmitText">Log In</span>
+                    </button>
+                </form>
+
+                <div id="magicLinkDivider" class="relative flex py-6 items-center">
+                    <div class="flex-grow border-t border-slate-200 dark:border-white/10"></div>
+                    <span class="flex-shrink-0 mx-4 text-xs text-slate-400 uppercase tracking-widest">Or</span>
+                    <div class="flex-grow border-t border-slate-200 dark:border-white/10"></div>
+                </div>
+
+                <button id="magicLinkBtn" onclick="switchAuthMode('magic_link')" class="w-full flex items-center justify-center gap-2 border border-slate-300 dark:border-white/20 hover:border-cyan-500/50 hover:bg-slate-50 dark:hover:bg-white/5 px-6 py-3.5 rounded-xl font-medium text-slate-700 dark:text-white transition-all mb-6">
+                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-500"></i>
+                    Send Magic Link
+                </button>
+
+                <div class="text-center">
+                    <button id="bottomToggleBtn" onclick="switchAuthMode('signup')" class="text-sm text-slate-500 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors font-medium">
+                        Don't have an account? Sign Up
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <main class="min-h-[90vh] flex flex-col items-center justify-center relative px-4 text-center z-10 pt-24 md:pt-32 pb-12 md:pb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 mb-8 backdrop-blur-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></span>
+            <span class="text-[10px] uppercase tracking-widest text-slate-600 dark:text-gray-300">CrewAI Orchestrator Online</span>
+        </div>
+        
+        <h1 class="text-5xl md:text-7xl font-light tracking-tight mb-6 max-w-4xl mx-auto leading-tight text-slate-900 dark:text-white">
+            Resolving claims at the speed of <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-indigo-600 dark:from-cyan-400 dark:to-indigo-500 font-semibold shadow-cyan-500/20 animate-gradient">Sound.</span>
+        </h1>
+        
+        <p class="text-lg text-slate-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+            The world's first autonomous voice agentic claims desk. Talk, upload photo evidence, and receive a formal verdict in under 30 seconds. Fully dynamic agentic orchestration.
+        </p>
+        
+        <button onclick="startApp()" class="btn-glow px-8 py-4 rounded-full text-sm font-medium uppercase tracking-widest flex items-center gap-3 group">
+            Start Conversation
+            <i class="fa-solid fa-microphone group-hover:scale-110 transition-transform"></i>
+        </button>
+
+        <!-- Tech Trust Badges -->
+        <div class="flex flex-wrap justify-center gap-4 mt-16 max-w-2xl mx-auto">
+            <div class="tech-badge">
+                <i class="fa-solid fa-brain text-cyan-600 dark:text-cyan-400"></i>
+                <span>Gemini 1.5 Flash</span>
+            </div>
+            <div class="tech-badge">
+                <i class="fa-solid fa-users text-indigo-600 dark:text-indigo-400"></i>
+                <span>CrewAI Orchestrated</span>
+            </div>
+            <div class="tech-badge">
+                <i class="fa-solid fa-database text-emerald-600 dark:text-emerald-400"></i>
+                <span>Supabase Backend</span>
+            </div>
+            <div class="tech-badge">
+                <i class="fa-solid fa-lock text-yellow-600 dark:text-yellow-400"></i>
+                <span>AES-256 Encryption</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Stats Counter Section -->
+    <section class="py-12 md:py-16 px-4 md:px-8 max-w-7xl mx-auto z-10 relative border-t border-slate-200 dark:border-white/5 reveal">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center" id="statsContainer">
+            <div class="glass-card tilt-card p-8 rounded-2xl flex flex-col items-center justify-center">
+                <span class="text-4xl md:text-5xl font-light tracking-tight stat-number tilt-content" data-target="6">0</span>
+                <span class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest mt-2 font-medium tilt-content">Autonomous AI Agents</span>
+            </div>
+            <div class="glass-card tilt-card p-8 rounded-2xl flex flex-col items-center justify-center">
+                <div class="flex items-baseline justify-center">
+                    <span class="text-4xl md:text-5xl font-light tracking-tight stat-number" data-target="30">0</span>
+                    <span class="text-2xl font-light text-cyan-600 dark:text-cyan-400">s</span>
+                </div>
+                <span class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest mt-2 font-medium">Avg. Response Time</span>
+            </div>
+            <div class="glass-card p-8 rounded-2xl flex flex-col items-center justify-center">
+                <div class="flex items-baseline justify-center">
+                    <span class="text-4xl md:text-5xl font-light tracking-tight stat-number" data-target="99" data-suffix=".2%">0</span>
+                    <span class="text-2xl font-light text-cyan-600 dark:text-cyan-400">.2%</span>
+                </div>
+                <span class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest mt-2 font-medium">Decision Accuracy</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-16 md:py-24 px-4 md:px-8 max-w-7xl mx-auto z-10 relative border-t border-slate-200 dark:border-white/5">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-light tracking-tight mb-4 text-cyan-600 dark:text-cyan-400">The Autonomous Claim Flow</h2>
+            <p class="text-sm text-slate-500 dark:text-gray-400 max-w-xl mx-auto font-light">Three simple, automated steps to resolve your insurance or service claims with no manual hold times.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass-card p-8 rounded-2xl step-card" data-step="1">
+                <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Speak & Interview</h3>
+                <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">Engage in an intelligent voice interview. The manager agent asks dynamic questions customized to your specific policy guidelines.</p>
+            </div>
+            <div class="glass-card p-8 rounded-2xl step-card" data-step="2">
+                <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Upload Incident Evidence</h3>
+                <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">Directly drag and drop photos of damage or receipts. The multimodal Vision agent checks details, metadata, and cross-references them instantly.</p>
+            </div>
+            <div class="glass-card p-8 rounded-2xl step-card" data-step="3">
+                <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Instant Final Decision</h3>
+                <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">The policy and fraud agents finalize their review, store the verdict securely in the database, and dispatch a comprehensive email receipt.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agent Capabilities Section -->
+    <section class="py-16 md:py-24 px-4 md:px-8 max-w-7xl mx-auto z-10 relative border-t border-slate-200 dark:border-white/5 reveal">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-light tracking-tight mb-4 text-indigo-600 dark:text-indigo-400">Multi-Agent Intelligence</h2>
+            <p class="text-sm text-slate-500 dark:text-gray-400 max-w-xl mx-auto font-light">Our system orchestrates 6 distinct AI experts, each dedicated to a portion of the claims pipeline.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass-card tilt-card p-8 rounded-2xl">
+                <div class="tilt-content">
+                    <i class="fa-solid fa-microphone-lines text-3xl text-cyan-600 dark:text-cyan-400 mb-6"></i>
+                    <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Natural Voice Interviewer</h3>
+                    <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">Gathers incident description naturally, maintaining full context and session state across websocket messages.</p>
+                </div>
+            </div>
+            <div class="glass-card tilt-card p-8 rounded-2xl">
+                <div class="tilt-content">
+                    <i class="fa-solid fa-eye text-3xl text-blue-600 dark:text-blue-400 mb-6"></i>
+                    <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Multimodal Vision Analyst</h3>
+                    <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">Inspects uploaded claim photos pixel-by-pixel, using Gemini Vision API to verify authenticity and assess damage severity.</p>
+                </div>
+            </div>
+            <div class="glass-card tilt-card p-8 rounded-2xl">
+                <div class="tilt-content">
+                    <i class="fa-solid fa-shield-halved text-3xl text-purple-600 dark:text-purple-400 mb-6"></i>
+                    <h3 class="text-lg font-medium mb-3 text-slate-900 dark:text-white">Fraud Detective</h3>
+                    <p class="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-light">Cross-references transcript history, claim logs, and vision assessments to highlight any potential inconsistencies or duplications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-8 border-t border-slate-200 dark:border-white/5 text-center relative z-10 bg-slate-50 dark:bg-black/20">
+        <p class="text-slate-500 dark:text-gray-500 text-sm tracking-widest uppercase">© 2026 VeriClaim AI Platform. All rights reserved.</p>
+    </footer>
+
+    <!-- Supabase JS & Custom Auth Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const INITIAL_HASH = window.location.hash;
+        let supabaseClient = null;
+        let isSignUp = false;
+        
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/v1/config');
+                const data = await res.json();
+                supabaseClient = supabase.createClient(data.SUPABASE_URL, data.SUPABASE_KEY);
+                checkSession();
+            } catch (e) {
+                console.error("Supabase config missing", e);
+            }
+        }
+        
+        let authMode = 'login'; // 'login', 'signup', 'forgot_password', 'magic_link'
+        
+        function toggleAuthModal() {
+            const modal = document.getElementById('authModal');
+            modal.classList.toggle('hidden');
+            document.getElementById('errorMsg').classList.add('hidden');
+            document.getElementById('authStatusMsg').classList.add('hidden');
+            document.getElementById('authForm').reset();
+            if (!modal.classList.contains('hidden')) {
+                switchAuthMode('login');
+            }
+        }
+
+        function switchAuthMode(mode) {
+            authMode = mode;
+            const title = document.getElementById('authTitle');
+            const subtitle = document.getElementById('authSubtitle');
+            const submitText = document.getElementById('authSubmitText');
+            const nameContainer = document.getElementById('nameFieldContainer');
+            const nameInput = document.getElementById('nameInput');
+            const pwdContainer = document.getElementById('passwordFieldContainer');
+            const pwdInput = document.getElementById('passwordInput');
+            const magicDivider = document.getElementById('magicLinkDivider');
+            const magicBtn = document.getElementById('magicLinkBtn');
+            const bottomToggleBtn = document.getElementById('bottomToggleBtn');
+            const forgotBtn = document.getElementById('forgotPwdBtn');
+
+            // Reset visibilities
+            nameContainer.classList.add('hidden');
+            nameInput.removeAttribute('required');
+            pwdContainer.classList.remove('hidden');
+            pwdInput.setAttribute('required', 'true');
+            magicDivider.classList.remove('hidden');
+            magicBtn.classList.remove('hidden');
+            forgotBtn.classList.remove('hidden');
+
+            if (mode === 'login') {
+                title.innerText = "Welcome Back";
+                subtitle.innerText = "Sign in to your VeriClaim account.";
+                submitText.innerText = "Log In";
+                bottomToggleBtn.innerText = "Don't have an account? Sign Up";
+                bottomToggleBtn.onclick = () => switchAuthMode('signup');
+            } else if (mode === 'signup') {
+                title.innerText = "Create Account";
+                subtitle.innerText = "Join VeriClaim in seconds.";
+                submitText.innerText = "Sign Up";
+                nameContainer.classList.remove('hidden');
+                nameContainer.classList.add('flex');
+                nameInput.setAttribute('required', 'true');
+                bottomToggleBtn.innerText = "Already have an account? Log In";
+                bottomToggleBtn.onclick = () => switchAuthMode('login');
+            } else if (mode === 'forgot_password') {
+                title.innerText = "Reset Password";
+                subtitle.innerText = "We'll send you a link to reset your password.";
+                submitText.innerText = "Send Reset Link";
+                pwdContainer.classList.add('hidden');
+                pwdContainer.classList.remove('flex');
+                pwdInput.removeAttribute('required');
+                magicDivider.classList.add('hidden');
+                magicBtn.classList.add('hidden');
+                bottomToggleBtn.innerText = "Back to Log In";
+                bottomToggleBtn.onclick = () => switchAuthMode('login');
+            } else if (mode === 'magic_link') {
+                title.innerText = "Magic Link";
+                subtitle.innerText = "We'll send a passwordless login link to your email.";
+                submitText.innerText = "Send Magic Link";
+                pwdContainer.classList.add('hidden');
+                pwdContainer.classList.remove('flex');
+                pwdInput.removeAttribute('required');
+                magicDivider.classList.add('hidden');
+                magicBtn.classList.add('hidden');
+                bottomToggleBtn.innerText = "Back to Log In";
+                bottomToggleBtn.onclick = () => switchAuthMode('login');
+            } else if (mode === 'update_password') {
+                title.innerText = "New Password";
+                subtitle.innerText = "Enter your new secure password.";
+                submitText.innerText = "Update Password";
+                pwdContainer.classList.remove('hidden');
+                pwdContainer.classList.add('flex');
+                pwdInput.setAttribute('required', 'true');
+                magicDivider.classList.add('hidden');
+                magicBtn.classList.add('hidden');
+                bottomToggleBtn.innerText = "Cancel";
+                bottomToggleBtn.onclick = () => { toggleAuthModal(); switchAuthMode('login'); };
+            }
+            
+            document.getElementById('errorMsg').classList.add('hidden');
+            document.getElementById('authStatusMsg').classList.add('hidden');
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const fullName = document.getElementById('nameInput').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const statusMsg = document.getElementById('authStatusMsg');
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const spinner = document.getElementById('authSubmitSpinner');
+            const submitText = document.getElementById('authSubmitText');
+            
+            errorMsg.classList.add('hidden');
+            statusMsg.classList.add('hidden');
+            
+            submitBtn.disabled = true;
+            spinner.classList.remove('hidden');
+            
+            try {
+                let result;
+                if (authMode === 'signup') {
+                    result = await supabaseClient.auth.signUp({ 
+                        email, password, options: { data: { full_name: fullName } }
+                    });
+                    if (result.error) throw result.error;
+                    statusMsg.innerText = "Registration successful! Please check your email to confirm your account.";
+                    statusMsg.classList.remove('hidden');
+                    document.getElementById('authForm').reset();
+                } else if (authMode === 'login') {
+                    result = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (result.error) throw result.error;
+                    toggleAuthModal();
+                    checkSession();
+                } else if (authMode === 'magic_link') {
+                    result = await supabaseClient.auth.signInWithOtp({ email });
+                    if (result.error) throw result.error;
+                    statusMsg.innerText = "Magic link sent! Check your email inbox to log in.";
+                    statusMsg.classList.remove('hidden');
+                    document.getElementById('authForm').reset();
+                } else if (authMode === 'forgot_password') {
+                    result = await supabaseClient.auth.resetPasswordForEmail(email);
+                    if (result.error) throw result.error;
+                    statusMsg.innerText = "Password reset link sent! Check your email.";
+                    statusMsg.classList.remove('hidden');
+                    document.getElementById('authForm').reset();
+                } else if (authMode === 'update_password') {
+                    result = await supabaseClient.auth.updateUser({ password: password });
+                    if (result.error) throw result.error;
+                    statusMsg.innerText = "Password successfully updated! You are now logged in.";
+                    statusMsg.classList.remove('hidden');
+                    document.getElementById('authForm').reset();
+                    setTimeout(() => {
+                        toggleAuthModal();
+                        checkSession();
+                    }, 2000);
+                }
+            } catch (err) {
+                if (err.message && err.message.toLowerCase().includes('ban')) {
+                    errorMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> <strong>Account Suspended:</strong> Your account has been disabled due to policy violations. Please contact support if you believe this is a mistake.`;
+                    errorMsg.className = "text-xs font-medium bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-500/30 mb-4 text-left leading-relaxed";
+                } else {
+                    errorMsg.innerText = err.message;
+                }
+                errorMsg.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function checkSession() {
+            if(!supabaseClient) return;
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const authBtn = document.getElementById('authBtn');
+            
+            if (session) {
+                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                
+                // Save user data for other pages to use
+                localStorage.setItem('vericlaim_user', JSON.stringify({
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: name,
+                    token: session.access_token
+                }));
+
+                // Logged-in users should be on the dashboard, not the landing page.
+                // Only exception: if they're resetting their password (recovery hash present).
+                const isRecovery = INITIAL_HASH.includes('type=recovery') || window.location.hash.includes('type=recovery');
+                if (!isRecovery) {
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                // If recovery flow, just show logout button
+                authBtn.innerText = "Log Out";
+                authBtn.onclick = async () => {
+                    await supabaseClient.auth.signOut();
+                    localStorage.removeItem('vericlaim_user');
+                    window.location.reload();
+                };
+            } else {
+                localStorage.removeItem('vericlaim_user');
+                authBtn.innerText = "Log In";
+                authBtn.onclick = toggleAuthModal;
+            }
+        }
+
+        function startApp() {
+            const user = localStorage.getItem('vericlaim_user');
+            if (user) {
+                window.location.href = 'dashboard.html';
+            } else {
+                toggleAuthModal();
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const icon = document.getElementById('mobileMenuIcon');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-xmark');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+                icon.classList.remove('fa-xmark');
+                icon.classList.add('fa-bars');
+            }
+        }
+
+        // Theme Toggle Helpers
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            if (isDark) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                    themeIcon.className = 'fa-solid fa-sun';
+                } else {
+                    themeIcon.className = 'fa-solid fa-moon';
+                }
+            }
+        }
+
+        // Stats Counter Animation
+        function initStatsAnimation() {
+            const stats = document.querySelectorAll('.stat-number');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const target = entry.target;
+                        const targetVal = parseInt(target.getAttribute('data-target'));
+                        let current = 0;
+                        const duration = 1200; // ms
+                        const stepTime = Math.max(Math.floor(duration / targetVal), 15);
+                        
+                        const timer = setInterval(() => {
+                            current += 1;
+                            target.innerText = current;
+                            if (current >= targetVal) {
+                                clearInterval(timer);
+                            }
+                        }, stepTime);
+                        observer.unobserve(target);
+                    }
+                });
+            }, { threshold: 0.2 });
+            stats.forEach(stat => observer.observe(stat));
+        }
+
+        window.onload = async () => {
+            // Capture the hash BEFORE Supabase automatically erases it!
+            const isRecovery = INITIAL_HASH.includes('type=recovery') || window.location.hash.includes('type=recovery');
+            
+            await fetchConfig();
+            
+            // If they clicked a reset link, force the modal open
+            if (isRecovery) {
+                setTimeout(() => {
+                    const modal = document.getElementById('authModal');
+                    modal.classList.remove('hidden');
+                    switchAuthMode('update_password');
+                }, 500);
+            }
+            
+            initStatsAnimation();
+            updateThemeIcon();
+        };
+    </script>
+    <script src="js/ui_enhancements.js"></script>
+</body>
+</html>

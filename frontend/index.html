@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VeriClaim Voice Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Theme Initializer -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col antialiased bg-slate-50 dark:bg-[#030303] text-slate-800 dark:text-gray-200">
+    
+    <!-- TopNavBar -->
+    <header class="flex flex-wrap justify-between items-center w-full px-4 sm:px-8 py-3 sm:py-4 top-0 z-50 absolute bg-slate-50 dark:bg-[#030303] shadow-sm dark:shadow-none pointer-events-none gap-y-3">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span class="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]"></span>
+            <span class="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-gray-400 tracking-widest uppercase" id="agentStatus">Live Connection</span>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-5 pointer-events-auto">
+            <button onclick="toggleTheme()" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center" title="Toggle Light/Dark Mode">
+                <i class="fa-solid fa-sun" id="themeIcon"></i>
+            </button>
+            <div class="w-px h-4 bg-slate-200 dark:bg-white/10 hidden sm:block"></div>
+            <div id="userDisplay" class="hidden items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full px-2 sm:px-3 py-1 sm:py-1.5 backdrop-blur-md">
+                <div id="userAvatar" class="avatar-initial w-5 h-5 sm:w-6 sm:h-6 text-[10px]">U</div>
+                <span id="userName" class="text-[10px] sm:text-xs text-slate-600 dark:text-gray-300 font-medium hidden md:inline-block max-w-[80px] truncate">User</span>
+            </div>
+            <a href="dashboard.html" class="text-[10px] sm:text-xs text-slate-500 hover:text-cyan-600 dark:text-gray-500 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center gap-1.5 font-medium whitespace-nowrap">
+                <i class="fa-solid fa-gauge-high"></i> <span class="hidden sm:inline">Dashboard</span>
+            </a>
+            <button id="endSessionBtn" class="px-3 sm:px-6 h-8 sm:h-10 rounded-full border border-slate-300 dark:border-gray-700/50 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-[9px] sm:text-[10px] uppercase tracking-widest bg-white/40 dark:bg-black/20 backdrop-blur-md whitespace-nowrap">End Session</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col md:flex-row w-full h-screen overflow-hidden relative">
+        
+        <!-- Left Panel: The Cinematic Canvas Wave -->
+        <section class="w-full md:w-1/2 h-[40vh] md:h-full border-b md:border-b-0 md:border-r border-slate-200 dark:border-white/5 flex flex-col items-center justify-center relative bg-slate-100 dark:bg-[#030303]">
+            <div class="absolute bottom-0 left-0 w-full z-0 flex justify-center h-full">
+                <canvas id="waveCanvas" class="absolute bottom-0 left-0 w-full h-[350px]"></canvas>
+            </div>
+            
+            <div class="absolute bottom-24 flex flex-col items-center gap-2 z-10 pointer-events-none">
+                <span id="visualizerLabel" class="text-slate-500 dark:text-gray-400 text-[10px] tracking-[0.4em] uppercase transition-opacity duration-500">Ready</span>
+            </div>
+        </section>
+
+        <!-- Right Panel: Transcription & Upload -->
+        <section class="w-full md:w-1/2 h-[60vh] md:h-full flex flex-col bg-slate-50 dark:bg-[#050505] relative right-pane" id="rightPane">
+            
+            <!-- Subtle Grid Background -->
+            <div class="grid-bg"></div>
+            
+            <!-- The Mouse Glow Effect -->
+            <div class="mouse-glow" id="mouseGlow"></div>
+
+            <!-- View 1: Transcription Area (Active by default) -->
+            <div class="flex-1 overflow-y-auto transcription-area px-4 md:px-16 pt-20 md:pt-24 pb-28 md:pb-48 flex flex-col gap-8 z-10 transition-all duration-500" id="transcriptArea">
+                <!-- Dialogue will be injected here dynamically -->
+            </div>
+
+            <!-- View 2: Inline Upload Area (Hidden by default) -->
+            <div class="absolute inset-0 pt-20 md:pt-24 pb-28 md:pb-48 px-4 md:px-16 flex flex-col z-10 opacity-0 pointer-events-none transition-all duration-500 translate-y-4" id="uploadArea">
+                <div class="w-full max-w-[800px] mx-auto flex-1 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-sm font-medium text-slate-600 dark:text-gray-300 tracking-widest uppercase">Evidence Upload</h2>
+                        <button id="closeUploadBtn" class="text-slate-500 hover:text-slate-800 dark:text-gray-500 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <div id="dropZone" class="flex-1 border border-dashed border-slate-300 dark:border-gray-700/50 rounded-xl bg-slate-100/50 dark:bg-white/[0.02] hover:bg-slate-200/50 dark:hover:bg-white/[0.04] transition-colors flex flex-col items-center justify-center gap-4 cursor-pointer">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-cyan-600 dark:text-cyan-500/50"></i>
+                        <div class="text-center">
+                            <p class="text-sm text-slate-700 dark:text-gray-300 font-medium">Click or drag evidence here</p>
+                            <p class="text-xs text-slate-500 dark:text-gray-600 mt-1 uppercase tracking-widest">Images only</p>
+                        </div>
+                    </div>
+
+                    <div id="imageGallery" class="flex gap-4 mt-6 overflow-x-auto pb-4"></div>
+                </div>
+            </div>
+
+            <!-- Start Conversation Overlay -->
+            <div id="startOverlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50 dark:bg-[#050505] backdrop-blur-md transition-opacity duration-500 gap-4">
+                <button id="startConversationBtn" class="btn-glow px-8 py-4 rounded-full text-sm font-medium uppercase tracking-widest flex items-center gap-3 group bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black/80 shadow-lg dark:shadow-none border border-slate-200 dark:border-cyan-400/50">
+                    Start Conversation
+                    <i class="fa-solid fa-microphone group-hover:scale-110 transition-transform"></i>
+                </button>
+                <p class="text-xs text-slate-500 dark:text-gray-500 uppercase tracking-widest font-light">Speak naturally once connected</p>
+            </div>
+
+            <!-- Floating Action Bar (Hidden initially) -->
+            <div class="absolute bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/95 dark:bg-[#0a0a0a]/80 border border-slate-200 dark:border-white/10 px-4 md:px-6 py-3 rounded-full backdrop-blur-xl shadow-2xl z-20 transition-all hover:bg-white dark:hover:bg-[#111]/90 opacity-0 pointer-events-none translate-y-4" id="actionBar">
+                
+                <button id="toggleMicBtn" class="w-10 h-10 rounded-full flex items-center justify-center text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-400/10 hover:bg-cyan-200 dark:hover:bg-cyan-400/20 transition-all muted" title="Mute/Unmute">
+                    <i class="fa-solid fa-microphone text-sm"></i>
+                </button>
+
+                <div class="w-px h-6 bg-slate-200 dark:bg-white/10 mx-2"></div>
+
+                <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                <button id="toggleUploadBtn" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all" title="Upload Evidence">
+                    <i class="fa-solid fa-paperclip text-sm"></i>
+                </button>
+
+                <div id="processingIndicator" class="hidden items-center gap-2 ml-4 mr-2">
+                    <div class="flex gap-1 h-3 items-center w-4">
+                        <div class="w-1 h-2 bg-cyan-600 dark:bg-cyan-400 rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
+                        <div class="w-1 h-3 bg-cyan-600 dark:bg-cyan-400 rounded-full animate-[pulse_1.2s_ease-in-out_infinite_0.2s]"></div>
+                        <div class="w-1 h-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full animate-[pulse_0.8s_ease-in-out_infinite_0.4s]"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-500 dark:text-gray-400 tracking-widest uppercase">Processing</span>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.js"></script>
+    <script>
+      if (window.ort) {
+        ort.env.wasm.wasmPaths = 
+          "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
+    <script src="js/wave_engine.js?v=2"></script>
+    <script src="js/uploader.js?v=2"></script>
+    <script src="js/voice_agent.js?v=2"></script>
+    <script>
+        // Shared theme toggler triggers inside page contexts
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            if (isDark) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                    themeIcon.className = 'fa-solid fa-sun';
+                } else {
+                    themeIcon.className = 'fa-solid fa-moon';
+                }
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+</body>
+</html>

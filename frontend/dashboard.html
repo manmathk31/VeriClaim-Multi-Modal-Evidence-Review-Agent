@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="VeriClaim Dashboard — Manage your insurance claims, view history, and track verdicts."/>
+    <title>VeriClaim — Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
+    <style>
+        /* Dashboard-specific styles */
+        .sidebar-link { transition: all 0.2s ease; }
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(8, 145, 178, 0.08);
+            color: #0891b2;
+        }
+        html.dark .sidebar-link:hover, html.dark .sidebar-link.active {
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+        }
+        .status-badge {
+            font-size: 10px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .status-active { background: rgba(34, 211, 238, 0.1); color: #0891b2; border: 1px solid rgba(8, 145, 178, 0.3); }
+        .status-submitted { background: rgba(251, 191, 36, 0.1); color: #d97706; border: 1px solid rgba(217, 119, 6, 0.3); }
+        .status-approved { background: rgba(34, 197, 94, 0.1); color: #16a34a; border: 1px solid rgba(22, 163, 74, 0.3); }
+        .status-flagged { background: rgba(249, 115, 22, 0.1); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); }
+        .status-denied { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); }
+
+        html.dark .status-active { background: rgba(34, 211, 238, 0.15); color: #22d3ee; border-color: rgba(34, 211, 238, 0.4); }
+        html.dark .status-submitted { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); }
+        html.dark .status-approved { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+        html.dark .status-flagged { background: rgba(249, 115, 22, 0.15); color: #fb923c; border-color: rgba(249, 115, 22, 0.4); }
+        html.dark .status-denied { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+
+        .claim-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .claim-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(8, 145, 178, 0.4);
+        }
+        html.dark .claim-card:hover {
+            border-color: rgba(34, 211, 238, 0.3);
+        }
+
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 2px 2px 0 0;
+        }
+        .stat-card.cyan::before { background: linear-gradient(90deg, #0891b2, #22d3ee); }
+        .stat-card.green::before { background: linear-gradient(90deg, #16a34a, #4ade80); }
+        .stat-card.amber::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .stat-card.red::before { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+        /* Conversation viewer */
+        .msg-bubble-user {
+            background: linear-gradient(135deg, rgba(8, 145, 178, 0.08), rgba(99, 102, 241, 0.08));
+            border: 1px solid rgba(8, 145, 178, 0.15);
+        }
+        html.dark .msg-bubble-user {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(34, 211, 238, 0.15);
+        }
+        .msg-bubble-ai {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        html.dark .msg-bubble-ai {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* Content area scrollbar */
+        .dashboard-content::-webkit-scrollbar { width: 6px; }
+        .dashboard-content::-webkit-scrollbar-track { background: transparent; }
+        .dashboard-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        html.dark .dashboard-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+        html.dark .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex antialiased bg-slate-50 text-slate-900 dark:bg-[#030303] dark:text-white relative">
+
+    <div class="ambient-mesh"></div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- SIDEBAR -->
+    <!-- ═══════════════════════════════════ -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 dark:bg-black/50 z-30 hidden md:hidden" onclick="toggleSidebar()"></div>
+    <aside id="sidebar" class="w-64 h-full flex-shrink-0 border-r border-slate-200 dark:border-white/5 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-xl flex flex-col z-40 absolute md:relative -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <!-- Logo -->
+        <div class="px-6 py-6 flex items-center gap-3 border-b border-slate-200 dark:border-white/5">
+            <span class="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
+            <a href="home.html" class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">VeriClaim</a>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-4 py-6 flex flex-col gap-1">
+            <button onclick="showSection('home')" id="nav-home" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-house-chimney w-5 text-center"></i> Dashboard
+            </button>
+            <button onclick="showSection('claims')" id="nav-claims" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-folder-open w-5 text-center"></i> My Claims
+            </button>
+            <button onclick="window.location.href='index.html'" id="nav-new" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-plus w-5 text-center"></i> New Claim
+            </button>
+            <button onclick="showSection('profile')" id="nav-profile" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                <i class="fa-solid fa-user w-5 text-center"></i> Profile
+            </button>
+
+            <div class="mt-auto flex flex-col gap-1">
+                <button onclick="showSection('support')" id="nav-support" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <i class="fa-solid fa-circle-question w-5 text-center"></i> Support & FAQ
+                </button>
+                <button onclick="toggleTheme()" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <i class="fa-solid fa-sun w-5 text-center" id="themeIcon"></i> <span id="themeLabel">Light Mode</span>
+                </button>
+                <button onclick="logout()" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 dark:text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/10">
+                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> Log Out
+                </button>
+            </div>
+        </nav>
+
+        <!-- User card at bottom -->
+        <div class="px-4 py-4 border-t border-slate-200 dark:border-white/5">
+            <div class="flex items-center gap-3 px-2">
+                <div id="sidebarAvatar" class="avatar-initial">U</div>
+                <div class="flex-1 min-w-0">
+                    <p id="sidebarName" class="text-sm font-medium text-slate-800 dark:text-white truncate">Loading...</p>
+                    <p id="sidebarEmail" class="text-[10px] text-slate-400 dark:text-gray-500 truncate uppercase tracking-widest">loading</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- MAIN CONTENT -->
+    <!-- ═══════════════════════════════════ -->
+    <main class="flex-1 h-full overflow-y-auto dashboard-content relative z-10 bg-slate-50 dark:bg-[#030303]">
+
+        <!-- Mobile Header -->
+        <div class="md:hidden flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/5 bg-white/70 dark:bg-black/40 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
+                <span class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white">VeriClaim</span>
+            </div>
+            <button onclick="toggleSidebar()" class="text-slate-700 dark:text-white text-lg focus:outline-none">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+
+        <!-- ── Section: Dashboard Home ── -->
+        <section id="section-home" class="p-6 md:p-12 max-w-6xl mx-auto">
+            <!-- Top Dashboard Header with Notification Bell -->
+            <div class="flex flex-col sm:flex-row justify-between items-start mb-10 gap-4">
+                <div>
+                    <h1 class="text-3xl font-light tracking-tight mb-2">Welcome back, <span id="welcomeName" class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-indigo-600 dark:from-cyan-400 dark:to-indigo-500 font-semibold">User</span></h1>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light">Here's an overview of your insurance claims activity.</p>
+                </div>
+                <div class="relative">
+                    <button id="notificationBtn" onclick="toggleNotifications()" class="relative p-2 rounded-full text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                        <i class="fa-solid fa-bell text-xl"></i>
+                        <span id="notificationBadge" class="absolute top-1 right-2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] hidden"></span>
+                    </button>
+                    <!-- Notification Dropdown -->
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 glass-card rounded-xl border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 transform origin-top-right transition-all">
+                        <div class="px-4 py-3 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
+                            <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-300">Notifications</h3>
+                            <button onclick="clearNotifications()" class="text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline">Clear All</button>
+                        </div>
+                        <div id="notificationList" class="max-h-64 overflow-y-auto bg-white/80 dark:bg-black/60 backdrop-blur-md">
+                            <div class="px-4 py-8 text-center text-xs text-slate-500 dark:text-gray-500" id="emptyNotif">
+                                No new notifications
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+                <div class="glass-card stat-card cyan rounded-2xl p-6">
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Total Claims</p>
+                    <p id="statTotal" class="text-3xl font-light stat-number">0</p>
+                </div>
+                <div class="glass-card stat-card green rounded-2xl p-6">
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Approved</p>
+                    <p id="statApproved" class="text-3xl font-light text-green-600 dark:text-green-400">0</p>
+                </div>
+                <div class="glass-card stat-card amber rounded-2xl p-6">
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Under Review</p>
+                    <p id="statPending" class="text-3xl font-light text-amber-600 dark:text-amber-400">0</p>
+                </div>
+                <div class="glass-card stat-card red rounded-2xl p-6">
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Denied</p>
+                    <p id="statDenied" class="text-3xl font-light text-red-500 dark:text-red-400">0</p>
+                </div>
+            </div>
+
+            <!-- Quick Action -->
+            <div class="glass-card rounded-2xl p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
+                <div>
+                    <h2 class="text-lg font-medium text-slate-800 dark:text-white mb-1">Need to file a new claim?</h2>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light">Start a conversation with our AI claims agent. It takes under 2 minutes.</p>
+                </div>
+                <a href="index.html" class="btn-glow px-6 py-3 rounded-full text-sm font-medium uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-plus"></i> New Claim
+                </a>
+            </div>
+
+            <!-- Recent Activity -->
+            <div>
+                <h2 class="text-sm font-medium text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-4">Recent Activity</h2>
+                <div id="recentActivity" class="flex flex-col gap-3">
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section: My Claims ── -->
+        <section id="section-claims" class="p-6 md:p-12 max-w-6xl mx-auto hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl font-light tracking-tight mb-1">My Claims</h1>
+                    <p class="text-sm text-slate-500 dark:text-gray-400 font-light">View and manage all your insurance claims.</p>
+                </div>
+                <a href="index.html" class="btn-glow px-5 py-2.5 rounded-full text-xs font-medium uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> New Claim
+                </a>
+            </div>
+            <div id="claimsList" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="skeleton h-40 w-full"></div>
+                <div class="skeleton h-40 w-full"></div>
+            </div>
+            <div id="noClaimsMsg" class="hidden text-center py-20">
+                <i class="fa-solid fa-folder-open text-4xl text-slate-300 dark:text-gray-700 mb-4"></i>
+                <p class="text-slate-500 dark:text-gray-400 font-light">No claims yet. Start a new conversation to file your first claim.</p>
+            </div>
+        </section>
+
+        <!-- ── Section: Conversation Viewer ── -->
+        <section id="section-viewer" class="p-6 md:p-12 max-w-4xl mx-auto hidden">
+            <button onclick="showSection('claims')" class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors mb-6 font-medium">
+                <i class="fa-solid fa-arrow-left"></i> Back to My Claims
+            </button>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h1 id="viewerTitle" class="text-xl font-medium text-slate-800 dark:text-white mb-1">Conversation</h1>
+                    <p id="viewerDate" class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest"></p>
+                </div>
+                <span id="viewerStatus" class="status-badge"></span>
+            </div>
+
+            <!-- Verdict Card (if available) -->
+            <div id="verdictCard" class="hidden glass-card rounded-2xl p-6 mb-8 border-l-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <i class="fa-solid fa-gavel text-lg"></i>
+                    <h3 class="text-sm font-semibold uppercase tracking-widest">Final Verdict</h3>
+                </div>
+                <p id="verdictType" class="text-lg font-semibold mb-2"></p>
+                <p id="verdictReasoning" class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed"></p>
+            </div>
+
+            <!-- Messages -->
+            <div id="viewerMessages" class="flex flex-col gap-4 mb-8"></div>
+
+            <!-- Resume button -->
+            <div id="resumeContainer" class="hidden text-center py-6">
+                <a id="resumeBtn" href="index.html" class="btn-glow px-6 py-3 rounded-full text-sm font-medium uppercase tracking-widest inline-flex items-center gap-2">
+                    <i class="fa-solid fa-comments"></i> Ask About This Claim
+                </a>
+            </div>
+        </section>
+
+        <!-- ── Section: Profile ── -->
+        <section id="section-profile" class="p-8 md:p-12 max-w-3xl mx-auto hidden">
+            <h1 class="text-2xl font-light tracking-tight mb-8">Profile & Settings</h1>
+
+            <!-- Profile Info -->
+            <div class="glass-card rounded-2xl p-8 mb-6">
+                <h2 class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-6">Account Information</h2>
+                <div class="flex flex-col gap-5">
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Full Name</label>
+                        <p id="profileName" class="text-lg font-light text-slate-800 dark:text-white mt-1">Loading...</p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Email Address</label>
+                        <p id="profileEmail" class="text-lg font-light text-slate-800 dark:text-white mt-1">Loading...</p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Member Since</label>
+                        <p id="profileSince" class="text-lg font-light text-slate-800 dark:text-white mt-1">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Policy Info -->
+            <div class="glass-card rounded-2xl p-8">
+                <h2 class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-6">Insurance Policy</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Coverage Tier</label>
+                        <p id="profileTier" class="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-indigo-600 dark:from-cyan-400 dark:to-indigo-500 mt-1">—</p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Policy Status</label>
+                        <p id="profileStatus" class="text-lg font-light text-slate-800 dark:text-white mt-1">—</p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold">Total Claims Filed</label>
+                        <p id="profileClaims" class="text-lg font-light text-slate-800 dark:text-white mt-1">—</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section: Support & FAQ ── -->
+        <section id="section-support" class="p-8 md:p-12 max-w-3xl mx-auto hidden">
+            <h1 class="text-2xl font-light tracking-tight mb-2">Support & FAQ</h1>
+            <p class="text-sm text-slate-500 dark:text-gray-400 font-light mb-8">Answers to common questions and how to reach out.</p>
+
+            <div class="glass-card rounded-2xl p-8 mb-6">
+                <h2 class="text-sm font-medium text-slate-800 dark:text-white mb-6 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-3">Frequently Asked Questions</h2>
+                
+                <div class="flex flex-col gap-6">
+                    <div>
+                        <h3 class="text-sm font-semibold text-cyan-600 dark:text-cyan-400 mb-2">How do I submit evidence for a claim?</h3>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">During your conversation with the AI agent, you can click the attachment icon (paperclip) to upload photos. The Vision Agent will automatically analyze them.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-cyan-600 dark:text-cyan-400 mb-2">What happens after I get a verdict?</h3>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">If approved, your payout is processed automatically within 24 hours. If flagged, a human agent will review your case. Denied claims can be appealed via email.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-cyan-600 dark:text-cyan-400 mb-2">Is the voice AI secure?</h3>
+                        <p class="text-sm text-slate-600 dark:text-gray-400 font-light leading-relaxed">Yes, all audio is processed in real-time, encrypted, and immediately discarded after transcription. Only the text transcript is stored for compliance.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-8 bg-gradient-to-br from-cyan-50/50 to-indigo-50/50 dark:from-cyan-900/10 dark:to-indigo-900/10 border border-cyan-100 dark:border-cyan-800/30">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center bg-cyan-100 dark:bg-cyan-900/50">
+                        <i class="fa-solid fa-envelope text-cyan-600 dark:text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-800 dark:text-white">Still need help?</h3>
+                        <p class="text-xs text-slate-500 dark:text-gray-400 font-light">Our human support team is available 24/7.</p>
+                    </div>
+                </div>
+                <button onclick="showToast('Support request sent. We will email you shortly.', 'success')" class="btn-glow w-full py-3 rounded-full text-xs font-medium uppercase tracking-widest mt-2">
+                    Contact Support
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- JAVASCRIPT -->
+    <!-- ═══════════════════════════════════ -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        let supabaseClient = null;
+        // ── Auth & Config ──
+        const user = JSON.parse(localStorage.getItem('vericlaim_user') || 'null');
+        if (!user || !user.token) {
+            window.location.href = 'home.html';
+        }
+        const API_BASE = '';
+        const headers = { 'Authorization': `Bearer ${user?.token}`, 'Content-Type': 'application/json' };
+
+        // ── Init ──
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Supabase Client
+            try {
+                const res = await fetch('/api/v1/config');
+                if (res.ok) {
+                    const data = await res.json();
+                    supabaseClient = supabase.createClient(data.SUPABASE_URL, data.SUPABASE_KEY);
+                }
+            } catch (e) {
+                console.error("Failed to initialize Supabase", e);
+            }
+
+            updateThemeIcon();
+            populateUserInfo();
+            await loadDashboardData();
+            setupNotificationWebSocket();
+        });
+
+        // ── Real-Time Notifications ──
+        let notifCount = 0;
+        let wsReconnectTimeout = null;
+        function setupNotificationWebSocket() {
+            if (!user || !user.token) return;
+            
+            const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const ws = new WebSocket(`${wsProto}://${window.location.host}/ws/notifications?token=${user.token}`);
+            
+            ws.onopen = () => {
+                console.log("Notifications connected.");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === "notification") {
+                    addNotification(data);
+                    // Refresh data behind the scenes
+                    loadDashboardData();
+                }
+            };
+            
+            ws.onclose = (event) => {
+                // 1008 = Policy Violation (e.g. bad token), 1000 = Normal Closure
+                if (event.code === 1008 || event.code === 1000) {
+                    console.log("WebSocket closed permanently (Code: " + event.code + "). Logging out if expired.");
+                    if (event.code === 1008) {
+                        // Token might be expired, force logout
+                        logout();
+                    }
+                    return; 
+                }
+                
+                // Otherwise, try reconnecting
+                wsReconnectTimeout = setTimeout(setupNotificationWebSocket, 5000); 
+            };
+        }
+
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.classList.toggle('hidden');
+            // Hide badge when opened
+            document.getElementById('notificationBadge').classList.add('hidden');
+            notifCount = 0;
+        }
+
+        function addNotification(data) {
+            const list = document.getElementById('notificationList');
+            const empty = document.getElementById('emptyNotif');
+            if (empty) empty.remove();
+
+            // Status color
+            let color = "text-cyan-500";
+            let bg = "bg-cyan-500/10";
+            if(data.status === "approved") { color = "text-green-500"; bg = "bg-green-500/10"; }
+            if(data.status === "denied") { color = "text-red-500"; bg = "bg-red-500/10"; }
+
+            const html = `
+                <div class="px-4 py-3 border-b border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    <div class="flex gap-3">
+                        <div class="mt-1 flex-shrink-0 w-8 h-8 rounded-full ${bg} flex items-center justify-center">
+                            <i class="fa-solid fa-file-invoice ${color} text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-800 dark:text-white">${data.title}</p>
+                            <p class="text-xs text-slate-500 dark:text-gray-400 mt-1">${data.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            list.insertAdjacentHTML('afterbegin', html);
+
+            notifCount++;
+            document.getElementById('notificationBadge').classList.remove('hidden');
+            showToast(data.message, data.status === 'approved' ? 'success' : 'alert');
+        }
+
+        function clearNotifications() {
+            const list = document.getElementById('notificationList');
+            list.innerHTML = `<div class="px-4 py-8 text-center text-xs text-slate-500 dark:text-gray-500" id="emptyNotif">No new notifications</div>`;
+            document.getElementById('notificationBadge').classList.add('hidden');
+            notifCount = 0;
+        }
+
+        function populateUserInfo() {
+            const name = user?.name || user?.email?.split('@')[0] || 'User';
+            const firstLetter = name.charAt(0).toUpperCase();
+            document.getElementById('welcomeName').textContent = name.split(' ')[0];
+            document.getElementById('sidebarName').textContent = name;
+            document.getElementById('sidebarEmail').textContent = user?.email || '';
+            document.getElementById('sidebarAvatar').textContent = firstLetter;
+        }
+
+        // ── Section Navigation ──
+        function showSection(name) {
+            ['home', 'claims', 'profile', 'viewer', 'support'].forEach(s => {
+                const sec = document.getElementById(`section-${s}`);
+                if (sec) sec.classList.add('hidden');
+                const nav = document.getElementById(`nav-${s}`);
+                if (nav) nav.classList.remove('active');
+            });
+            const targetSec = document.getElementById(`section-${name}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+            const nav = document.getElementById(`nav-${name}`);
+            if (nav) nav.classList.add('active');
+
+            if (name === 'claims') loadClaims();
+            if (name === 'profile') loadProfile();
+        }
+
+        // ── Load Dashboard Data ──
+        async function loadDashboardData() {
+            try {
+                const [profileRes, convsRes] = await Promise.all([
+                    fetch('/api/v1/profile', { headers }),
+                    fetch('/api/v1/conversations', { headers })
+                ]);
+
+                if (profileRes.ok) {
+                    const profileData = await profileRes.json();
+                    const stats = profileData.stats || {};
+                    document.getElementById('statTotal').textContent = stats.total_claims || 0;
+                    document.getElementById('statApproved').textContent = stats.approved || 0;
+                    document.getElementById('statPending').textContent = (stats.pending || 0) + (stats.flagged || 0);
+                    document.getElementById('statDenied').textContent = stats.denied || 0;
+                }
+
+                if (convsRes.ok) {
+                    const convsData = await convsRes.json();
+                    renderRecentActivity(convsData.conversations || []);
+                }
+            } catch (e) {
+                console.error('Dashboard load failed:', e);
+            }
+        }
+
+        function renderRecentActivity(conversations) {
+            const container = document.getElementById('recentActivity');
+            const recent = conversations.slice(0, 5);
+
+            if (recent.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-card rounded-xl p-6 text-center">
+                        <p class="text-sm text-slate-500 dark:text-gray-400 font-light">No recent activity. Start a new claim to get going!</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = recent.map(conv => {
+                const status = getDisplayStatus(conv);
+                const date = new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const title = conv.title || 'Untitled Conversation';
+                return `
+                    <div class="glass-card claim-card rounded-xl p-5 flex items-center justify-between gap-4" onclick="viewConversation('${conv.id}')">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center bg-cyan-50 dark:bg-cyan-400/10 flex-shrink-0">
+                                <i class="fa-solid fa-file-lines text-cyan-600 dark:text-cyan-400 text-sm"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-slate-800 dark:text-white truncate">${escapeHtml(title)}</p>
+                                <p class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest">${date}</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-${status.class} flex-shrink-0">${status.label}</span>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── My Claims ──
+        async function loadClaims() {
+            const container = document.getElementById('claimsList');
+            const noMsg = document.getElementById('noClaimsMsg');
+            container.innerHTML = '<div class="skeleton h-40 w-full"></div><div class="skeleton h-40 w-full"></div>';
+            noMsg.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/v1/conversations', { headers });
+                if (!res.ok) throw new Error('Failed to load');
+                const data = await res.json();
+                const convs = data.conversations || [];
+
+                if (convs.length === 0) {
+                    container.innerHTML = '';
+                    noMsg.classList.remove('hidden');
+                    return;
+                }
+
+                container.innerHTML = convs.map(conv => {
+                    const status = getDisplayStatus(conv);
+                    const date = new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const time = new Date(conv.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const title = conv.title || 'Untitled Conversation';
+                    const verdict = conv.claims?.final_verdict || null;
+                    const reasoning = conv.claims?.verdict_reasoning || '';
+
+                    return `
+                        <div class="glass-card claim-card rounded-2xl p-6 flex flex-col gap-4" onclick="viewConversation('${conv.id}')">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-cyan-50 to-indigo-50 dark:from-cyan-400/10 dark:to-indigo-400/10 flex-shrink-0">
+                                        <i class="fa-solid fa-file-circle-check text-cyan-600 dark:text-cyan-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-slate-800 dark:text-white">${escapeHtml(title.substring(0, 60))}${title.length > 60 ? '...' : ''}</p>
+                                        <p class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">${date} at ${time}</p>
+                                    </div>
+                                </div>
+                                <span class="status-badge status-${status.class}">${status.label}</span>
+                            </div>
+                            ${verdict ? `<div class="text-xs text-slate-500 dark:text-gray-400 font-light line-clamp-2 leading-relaxed">${escapeHtml(reasoning.substring(0, 150))}${reasoning.length > 150 ? '...' : ''}</div>` : ''}
+                            <div class="flex items-center gap-2 text-[10px] text-cyan-600 dark:text-cyan-400 font-medium uppercase tracking-widest">
+                                <i class="fa-solid fa-arrow-right"></i> View Details
+                            </div>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<p class="text-red-500 text-sm col-span-2">Failed to load claims. Please try again.</p>';
+            }
+        }
+
+        // ── Conversation Viewer ──
+        async function viewConversation(id) {
+            showSection('viewer');
+            const msgContainer = document.getElementById('viewerMessages');
+            msgContainer.innerHTML = '<div class="skeleton h-12 w-3/4"></div><div class="skeleton h-12 w-2/3 ml-auto"></div><div class="skeleton h-12 w-3/4"></div>';
+
+            try {
+                const res = await fetch(`/api/v1/conversations/${id}`, { headers });
+                if (!res.ok) throw new Error('Failed to load');
+                const data = await res.json();
+                const conv = data.conversation;
+
+                // Title & Date
+                document.getElementById('viewerTitle').textContent = conv.title || 'Conversation';
+                document.getElementById('viewerDate').textContent = new Date(conv.created_at).toLocaleDateString('en-US', {
+                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                });
+
+                // Status badge
+                const status = getDisplayStatus(conv);
+                const statusEl = document.getElementById('viewerStatus');
+                statusEl.textContent = status.label;
+                statusEl.className = `status-badge status-${status.class}`;
+
+                // Verdict card
+                const verdictCard = document.getElementById('verdictCard');
+                const claimData = conv.claims;
+                if (claimData && claimData.final_verdict) {
+                    verdictCard.classList.remove('hidden');
+                    const v = claimData.final_verdict;
+                    document.getElementById('verdictType').textContent =
+                        v === 'AUTO_APPROVE' ? '✅ Approved' :
+                        v === 'FLAGGED' ? '🔍 Flagged for Review' :
+                        v === 'DENIED' ? '❌ Denied' : v;
+                    document.getElementById('verdictReasoning').textContent = claimData.verdict_reasoning || 'No reasoning provided.';
+
+                    verdictCard.classList.remove('border-green-500', 'border-amber-500', 'border-red-500');
+                    if (v === 'AUTO_APPROVE') verdictCard.classList.add('border-green-500');
+                    else if (v === 'FLAGGED') verdictCard.classList.add('border-amber-500');
+                    else verdictCard.classList.add('border-red-500');
+                } else {
+                    verdictCard.classList.add('hidden');
+                }
+
+                // Messages
+                const messages = conv.messages || [];
+                if (messages.length === 0) {
+                    msgContainer.innerHTML = '<p class="text-sm text-slate-400 dark:text-gray-500 text-center py-8">No messages in this conversation.</p>';
+                } else {
+                    msgContainer.innerHTML = messages.map(msg => {
+                        const isUser = msg.role === 'user';
+                        return `
+                            <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
+                                <div class="${isUser ? 'msg-bubble-user' : 'msg-bubble-ai'} rounded-2xl px-5 py-3.5 max-w-[85%]">
+                                    <p class="text-[10px] text-slate-400 dark:text-gray-500 uppercase tracking-widest font-semibold mb-1.5">${isUser ? 'You' : 'AI Agent'}</p>
+                                    <p class="text-sm text-slate-700 dark:text-gray-300 font-light leading-relaxed">${escapeHtml(msg.content)}</p>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+
+                // Resume button (for active conversations)
+                const resumeContainer = document.getElementById('resumeContainer');
+                if (conv.status === 'active' || conv.status === 'submitted') {
+                    resumeContainer.classList.remove('hidden');
+                } else {
+                    resumeContainer.classList.add('hidden');
+                }
+
+            } catch (e) {
+                msgContainer.innerHTML = '<p class="text-red-500 text-sm text-center">Failed to load conversation.</p>';
+            }
+        }
+
+        // ── Profile ──
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/v1/profile', { headers });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+
+                document.getElementById('profileName').textContent = data.user?.name || 'Not set';
+                document.getElementById('profileEmail').textContent = data.user?.email || 'Not set';
+                document.getElementById('profileSince').textContent = data.user?.created_at
+                    ? new Date(data.user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                    : '—';
+
+                if (data.policy) {
+                    document.getElementById('profileTier').textContent = data.policy.tier || 'Basic';
+                    document.getElementById('profileStatus').textContent = data.policy.status || 'ACTIVE';
+                    document.getElementById('profileClaims').textContent = data.policy.past_claims || 0;
+                }
+            } catch (e) {
+                console.error('Profile load failed:', e);
+            }
+        }
+
+        // ── Helpers ──
+        function getDisplayStatus(conv) {
+            const verdict = conv.claims?.final_verdict;
+            if (verdict === 'AUTO_APPROVE') return { label: 'Approved', class: 'approved' };
+            if (verdict === 'FLAGGED') return { label: 'Under Review', class: 'flagged' };
+            if (verdict === 'DENIED') return { label: 'Denied', class: 'denied' };
+            if (conv.status === 'submitted') return { label: 'Processing', class: 'submitted' };
+            return { label: 'Active', class: 'active' };
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            const isDark = document.documentElement.classList.contains('dark');
+            if (icon) icon.className = isDark ? 'fa-solid fa-sun w-5 text-center' : 'fa-solid fa-moon w-5 text-center';
+            if (label) label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        }
+
+        async function logout() {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            localStorage.removeItem('vericlaim_user');
+            window.location.href = 'home.html';
+        }
+
+        // ── Toast Notifications ──
+        function showToast(message, type = 'success') {
+            if (typeof window.showEnhancedToast === 'function') {
+                return window.showEnhancedToast(message, type);
+            }
+            
+            // Fallback (legacy toast)
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            // Setup style based on type
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation';
+            const colorClass = type === 'success' ? 'text-green-500' : 'text-red-500';
+            
+            toast.className = `glass-card pointer-events-auto rounded-xl px-5 py-4 shadow-xl flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 ease-out`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icon} ${colorClass} text-lg"></i>
+                <p class="text-sm font-medium text-slate-800 dark:text-white">${escapeHtml(message)}</p>
+                <button onclick="this.parentElement.remove()" class="ml-4 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            // Auto dismiss
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ── Mobile Sidebar Toggle ──
+        function toggleSidebar() {
+            const sidebar = document.getElementById('dashboardSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('-translate-x-full');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('opacity-100');
+                overlay.classList.add('opacity-0');
+            } else {
+                overlay.classList.remove('hidden');
+                // slight delay for transition
+                setTimeout(() => {
+                    overlay.classList.remove('opacity-0');
+                    overlay.classList.add('opacity-100');
+                }, 10);
+            }
+        }
+    </script>
+    <script src="js/ui_enhancements.js"></script>
+</body>
+</html>
