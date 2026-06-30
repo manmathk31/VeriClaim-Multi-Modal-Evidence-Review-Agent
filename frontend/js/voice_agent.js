@@ -134,7 +134,12 @@ class VoiceAgent {
                 // Android-specific: Native VAD fallback
                 const isAndroid = /Android/i.test(navigator.userAgent);
                 if (isAndroid) {
-                    const combined = (this.currentTranscript + ' ' + (this.interimTranscript || '')).trim();
+                    let combined = this.currentTranscript;
+                    if (this.interimTranscript && !this.currentTranscript.toLowerCase().includes(this.interimTranscript.toLowerCase().trim())) {
+                        combined += ' ' + this.interimTranscript;
+                    }
+                    combined = combined.trim();
+                    
                     if (combined !== '') {
                         this.addUserMsg(combined);
                         this.processUserMessage(combined);
@@ -167,6 +172,13 @@ class VoiceAgent {
         const startBtn = document.getElementById('startConversationBtn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
+                // Mobile TTS Unlock: Must speak a silent utterance synchronously during user click
+                if (this.synth) {
+                    const unlockUtterance = new SpeechSynthesisUtterance('');
+                    unlockUtterance.volume = 0;
+                    this.synth.speak(unlockUtterance);
+                }
+
                 // Hide overlay, show action bar
                 document.getElementById('startOverlay').style.opacity = '0';
                 document.getElementById('startOverlay').style.pointerEvents = 'none';
@@ -291,7 +303,12 @@ class VoiceAgent {
 
                     // Wait a moment for final transcription results
                     setTimeout(() => {
-                        const combined = (this.currentTranscript + ' ' + (this.interimTranscript || '')).trim();
+                        let combined = this.currentTranscript;
+                        if (this.interimTranscript && !this.currentTranscript.toLowerCase().includes(this.interimTranscript.toLowerCase().trim())) {
+                            combined += ' ' + this.interimTranscript;
+                        }
+                        combined = combined.trim();
+                        
                         if (combined !== '') {
                             this.addUserMsg(combined);
                             this.processUserMessage(combined);
