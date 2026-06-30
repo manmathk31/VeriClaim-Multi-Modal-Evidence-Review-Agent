@@ -492,6 +492,8 @@ class SessionManager:
             self._supabase.table("conversations").delete().eq("user_id", user_id).execute()
             self._supabase.table("claims").delete().eq("user_id", user_id).execute()
             self._supabase.table("policies").delete().eq("id", user_id).execute()
+            self._supabase.table("notifications").delete().eq("user_id", user_id).execute()
+            self._supabase.table("admin_action_logs").delete().eq("user_id", user_id).execute()
             
             # Evict from in-memory cache immediately
             self.remove_user_session(user_id)
@@ -499,7 +501,10 @@ class SessionManager:
             # Delete local agent memory folder for this user if it exists
             user_memory_dir = f"./crewai_memory/{user_id}"
             if os.path.exists(user_memory_dir):
-                shutil.rmtree(user_memory_dir)
+                try:
+                    shutil.rmtree(user_memory_dir)
+                except Exception as mem_err:
+                    print(f"Warning: could not delete memory dir for {user_id}: {mem_err}")
             
             # 2. Delete Auth user
             self._supabase.auth.admin.delete_user(user_id)
@@ -535,6 +540,7 @@ class SessionManager:
             self._supabase.table("conversations").delete().eq("user_id", user_id).execute()
             self._supabase.table("claims").delete().eq("user_id", user_id).execute()
             self._supabase.table("policies").update({"past_claims": 0}).eq("id", user_id).execute()
+            self._supabase.table("notifications").delete().eq("user_id", user_id).execute()
             
             # Evict from in-memory cache to force a fresh DB pull next time
             self.remove_user_session(user_id)
@@ -542,7 +548,10 @@ class SessionManager:
             # Delete local agent memory folder for this user if it exists
             user_memory_dir = f"./crewai_memory/{user_id}"
             if os.path.exists(user_memory_dir):
-                shutil.rmtree(user_memory_dir)
+                try:
+                    shutil.rmtree(user_memory_dir)
+                except Exception as mem_err:
+                    print(f"Warning: could not delete memory dir for {user_id}: {mem_err}")
             
             try:
                 self._supabase.table("admin_action_logs").insert({
