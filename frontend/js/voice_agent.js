@@ -88,12 +88,12 @@ class VoiceAgent {
         };
 
         this.recognition.onresult = (event) => {
-            // BUG FIX #2: Iterate from event.resultIndex, not from 0.
-            // Starting from 0 every time caused duplicate accumulation of
-            // previously-finalized results in the transcript string.
+            // Rebuild the transcript from scratch on every event.
+            // This completely bypasses Android Chrome's stuttering bugs where resultIndex 
+            // behaves unpredictably or fires duplicate final segments.
             let interim = '';
             let finalSegment = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
+            for (let i = 0; i < event.results.length; ++i) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalSegment += transcript;
@@ -101,9 +101,8 @@ class VoiceAgent {
                     interim += transcript;
                 }
             }
-            // Append newly finalized text; show interim for real-time feel
-            this.currentTranscript += finalSegment;
-            // Store interim separately so it isn't double-counted later
+            // Overwrite instead of appending to prevent double-counting
+            this.currentTranscript = finalSegment;
             this.interimTranscript = interim;
         };
 
