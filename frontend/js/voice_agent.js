@@ -84,6 +84,7 @@ class VoiceAgent {
         this.recognition.onstart = () => {
             this.isListening = true;
             this.updateStatus("Live Connection");
+            if (this.toggleMicBtn) this.toggleMicBtn.classList.remove('muted');
         };
 
         this.recognition.onresult = (event) => {
@@ -122,6 +123,7 @@ class VoiceAgent {
         this.recognition.onend = () => {
             this.isListening = false;
             if (window.WaveEngine) window.WaveEngine.setListening(false);
+            if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
 
             // BUG FIX #4: Only show "Hold Space to Speak" if the agent is NOT
             // currently speaking. Previously this label stomped the "Transmitting"
