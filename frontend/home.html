@@ -37,28 +37,27 @@
             <span class="text-sm font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white">VeriClaim</span>
         </div>
         <div class="flex gap-4 md:gap-6 items-center">
-            <a href="about.html" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest font-medium hidden md:inline">About</a>
+            <a href="about.html" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest font-medium hidden sm:inline">About</a>
             
             <button onclick="toggleTheme()" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center gap-2" title="Toggle Light/Dark Mode">
                 <i class="fa-solid fa-sun" id="themeIcon"></i>
             </button>
             
-            <div class="hidden md:block w-px h-4 bg-slate-200 dark:bg-white/10"></div>
+            <div class="hidden sm:block w-px h-4 bg-slate-200 dark:bg-white/10"></div>
 
-            <button id="authBtn" onclick="toggleAuthModal()" class="hidden md:block text-xs text-slate-700 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 uppercase tracking-widest transition-colors font-medium border border-slate-300 dark:border-white/20 px-4 py-2 rounded-full hover:border-cyan-500/50 dark:hover:border-cyan-400/50">
+            <button id="authBtn" onclick="toggleAuthModal()" class="text-xs text-slate-700 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 uppercase tracking-widest transition-colors font-medium border border-slate-300 dark:border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full hover:border-cyan-500/50 dark:hover:border-cyan-400/50">
                 Log In
             </button>
             
-            <button onclick="toggleMobileMenu()" class="md:hidden text-slate-700 dark:text-white text-lg ml-2 focus:outline-none">
+            <button onclick="toggleMobileMenu()" class="sm:hidden text-slate-700 dark:text-white text-lg ml-1 focus:outline-none">
                 <i class="fa-solid fa-bars" id="mobileMenuIcon"></i>
             </button>
         </div>
     </nav>
 
     <!-- Mobile Navigation Menu -->
-    <div id="mobileMenu" class="fixed inset-0 top-[60px] bg-white/95 dark:bg-[#030303]/95 backdrop-blur-xl z-40 hidden flex-col items-center pt-16 gap-8 border-t border-slate-200 dark:border-white/5 transition-opacity">
+    <div id="mobileMenu" class="fixed inset-0 top-[60px] bg-white/95 dark:bg-[#030303]/95 backdrop-blur-xl z-40 hidden flex-col items-center pt-16 gap-8 border-t border-slate-200 dark:border-white/5 transition-opacity sm:hidden">
         <a href="about.html" class="text-sm text-slate-700 dark:text-gray-200 uppercase tracking-widest font-medium">About</a>
-        <button onclick="toggleAuthModal(); toggleMobileMenu();" class="text-sm text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-medium border border-cyan-500/30 px-8 py-3 rounded-full">Log In</button>
     </div>
 
     <!-- Auth Modal -->

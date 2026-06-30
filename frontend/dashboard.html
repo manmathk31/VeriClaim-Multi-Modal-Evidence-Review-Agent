@@ -110,7 +110,7 @@
             border-radius: 8px;
         }
         html.dark .skeleton {
-            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.08) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.08) 75%);
             background-size: 200% 100%;
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -135,7 +135,7 @@
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 px-4 py-6 flex flex-col gap-1">
+        <nav class="flex-1 px-4 py-6 flex flex-col gap-1 overflow-y-auto">
             <button onclick="showSection('home')" id="nav-home" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-gray-400">
                 <i class="fa-solid fa-house-chimney w-5 text-center"></i> Dashboard
             </button>
@@ -177,7 +177,7 @@
     <!-- ═══════════════════════════════════ -->
     <!-- MAIN CONTENT -->
     <!-- ═══════════════════════════════════ -->
-    <main class="flex-1 h-full overflow-y-auto dashboard-content relative z-10 bg-slate-50 dark:bg-[#030303]">
+    <main class="flex-1 h-[100dvh] overflow-y-auto dashboard-content relative z-10 bg-slate-50 dark:bg-[#030303] pb-24">
 
         <!-- Mobile Header -->
         <div class="md:hidden flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/5 bg-white/70 dark:bg-black/40 backdrop-blur-md sticky top-0 z-20">
@@ -220,21 +220,25 @@
 
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-                <div class="glass-card stat-card cyan rounded-2xl p-6">
-                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Total Claims</p>
-                    <p id="statTotal" class="text-3xl font-light stat-number">0</p>
+                <div class="glass-card stat-card cyan rounded-2xl p-6 relative overflow-hidden">
+                    <i class="fa-solid fa-layer-group absolute right-4 bottom-4 text-6xl text-cyan-500/10 dark:text-cyan-400/5"></i>
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2 relative z-10">Total Claims</p>
+                    <p id="statTotal" class="text-3xl font-light stat-number relative z-10">0</p>
                 </div>
-                <div class="glass-card stat-card green rounded-2xl p-6">
-                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Approved</p>
-                    <p id="statApproved" class="text-3xl font-light text-green-600 dark:text-green-400">0</p>
+                <div class="glass-card stat-card green rounded-2xl p-6 relative overflow-hidden">
+                    <i class="fa-solid fa-check-circle absolute right-4 bottom-4 text-6xl text-green-500/10 dark:text-green-400/5"></i>
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2 relative z-10">Approved</p>
+                    <p id="statApproved" class="text-3xl font-light text-green-600 dark:text-green-400 relative z-10">0</p>
                 </div>
-                <div class="glass-card stat-card amber rounded-2xl p-6">
-                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Under Review</p>
-                    <p id="statPending" class="text-3xl font-light text-amber-600 dark:text-amber-400">0</p>
+                <div class="glass-card stat-card amber rounded-2xl p-6 relative overflow-hidden">
+                    <i class="fa-solid fa-clock-rotate-left absolute right-4 bottom-4 text-6xl text-amber-500/10 dark:text-amber-400/5"></i>
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2 relative z-10">Under Review</p>
+                    <p id="statPending" class="text-3xl font-light text-amber-600 dark:text-amber-400 relative z-10">0</p>
                 </div>
-                <div class="glass-card stat-card red rounded-2xl p-6">
-                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2">Denied</p>
-                    <p id="statDenied" class="text-3xl font-light text-red-500 dark:text-red-400">0</p>
+                <div class="glass-card stat-card red rounded-2xl p-6 relative overflow-hidden">
+                    <i class="fa-solid fa-ban absolute right-4 bottom-4 text-6xl text-red-500/10 dark:text-red-400/5"></i>
+                    <p class="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-widest font-medium mb-2 relative z-10">Denied</p>
+                    <p id="statDenied" class="text-3xl font-light text-red-500 dark:text-red-400 relative z-10">0</p>
                 </div>
             </div>
 
@@ -833,8 +837,8 @@
 
         // ── Mobile Sidebar Toggle ──
         function toggleSidebar() {
-            const sidebar = document.getElementById('dashboardSidebar');
-            const overlay = document.getElementById('mobileOverlay');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
             
             sidebar.classList.toggle('-translate-x-full');
             if (sidebar.classList.contains('-translate-x-full')) {

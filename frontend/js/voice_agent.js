@@ -7,27 +7,27 @@ class VoiceAgent {
         this.toggleMicBtn = document.getElementById('toggleMicBtn');
         this.transcriptArea = document.getElementById('transcriptArea');
         this.processingIndicator = document.getElementById('processingIndicator');
-        
+
         this.isListening = false;
         this.isSpeaking = false;
         this.isProcessing = false;
         this.hasGreeted = false;
         this.isHoldingSpace = false;
         this.isVADProcessing = false;
-        
+
         // WebSocket reconnect state
         this.ws = null;
         this.wsReconnectAttempts = 0;
         this.wsMaxReconnects = 5;
         this.user = null;
 
-        this.conversationState = "GREETING"; 
-        
+        this.conversationState = "GREETING";
+
         // Premium UI Chime
         this.startupSound = new Audio('assets/chime.mp3');
         this.startupSound.volume = 0.5;
         this.startupSound.preload = 'auto';
-        
+
         this.setupSpeechRecognition();
         this.setupSpeechSynthesis();
         this.bindEvents();
@@ -37,7 +37,7 @@ class VoiceAgent {
         // instead of with a timeout to prevent race conditions.
         this.init();
     }
-    
+
     init() {
         // Authenticate User
         const userStr = localStorage.getItem('vericlaim_user');
@@ -60,31 +60,32 @@ class VoiceAgent {
                 userAvatarEl.innerText = this.userName.charAt(0).toUpperCase();
             }
             userDisplay.classList.remove('hidden');
+            userDisplay.classList.add('flex');
         }
 
-        if(this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
+        if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
         this.updateVisLabel("Ready");
         this.updateStatus("Standby");
     }
-    
+
     setupSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             this.updateStatus("Voice not supported.");
             return;
         }
-        
+
         this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true; 
+        this.recognition.continuous = true;
         this.recognition.interimResults = true;
         this.recognition.lang = 'en-US';
         this.currentTranscript = '';
-        
+
         this.recognition.onstart = () => {
             this.isListening = true;
             this.updateStatus("Live Connection");
         };
-        
+
         this.recognition.onresult = (event) => {
             // BUG FIX #2: Iterate from event.resultIndex, not from 0.
             // Starting from 0 every time caused duplicate accumulation of
@@ -104,7 +105,7 @@ class VoiceAgent {
             // Store interim separately so it isn't double-counted later
             this.interimTranscript = interim;
         };
-        
+
         this.recognition.onerror = (event) => {
             console.error("Speech Recognition Error:", event.error);
             // BUG FIX #3 (partial): Show user-visible feedback on mic errors
@@ -117,33 +118,33 @@ class VoiceAgent {
             this.isHoldingSpace = false;
             if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
         };
-        
+
         this.recognition.onend = () => {
             this.isListening = false;
             if (window.WaveEngine) window.WaveEngine.setListening(false);
-            
+
             // BUG FIX #4: Only show "Hold Space to Speak" if the agent is NOT
             // currently speaking. Previously this label stomped the "Transmitting"
             // label mid-speech because onend fires right after recognition.stop().
             if (!this.isSpeaking && !this.isProcessing && !this.isVADProcessing) {
                 this.updateVisLabel("Ready");
-                try { this.recognition.start(); } catch (err) {}
+                try { this.recognition.start(); } catch (err) { }
             }
         };
     }
-    
+
     startRecognitionSession() {
         this.currentTranscript = '';
         this.interimTranscript = '';
         if (this.recognition) {
-            try { this.recognition.start(); } catch (err) {}
+            try { this.recognition.start(); } catch (err) { }
         }
     }
-    
+
     setupSpeechSynthesis() {
         this.synth = window.speechSynthesis;
     }
-    
+
     bindEvents() {
         const startBtn = document.getElementById('startConversationBtn');
         if (startBtn) {
@@ -151,36 +152,48 @@ class VoiceAgent {
                 // Hide overlay, show action bar
                 document.getElementById('startOverlay').style.opacity = '0';
                 document.getElementById('startOverlay').style.pointerEvents = 'none';
-                
+
                 const actionBar = document.getElementById('actionBar');
                 actionBar.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
-                
+
                 // Connect WebSocket only when user starts the conversation
                 if (!this.ws) {
                     this.setupWebSocket();
                 }
-                
+
                 // Initialize state
                 this.updateStatus("Live Connection");
-                
+
                 if (!this.hasGreeted) {
                     this.hasGreeted = true;
-                    
-                    // Play startup chime
-                    this.startupSound.play().catch(e => console.log('Audio play prevented:', e));
-                    
-                    // Slight delay before AI greets so the chime plays clearly
-                    setTimeout(() => {
+
+                    // Manually turn on the visualizer glow immediately
+                    if (window.WaveEngine) window.WaveEngine.setSpeaking(true);
+
+                    // When chime finishes playing naturally, trigger AI and stop manual glow
+                    this.startupSound.onended = () => {
+                        if (window.WaveEngine) window.WaveEngine.setSpeaking(false);
                         this.triggerSystemResponse(`Hello, ${this.userName}. I am your VeriClaim assistant. Please describe the incident and any damage you are reporting today.`);
                         setTimeout(() => { this.setupVAD(); }, 5000);
-                    }, 800);
+                    };
+
+                    // Play startup chime. If blocked, fallback instantly
+                    const playPromise = this.startupSound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.log('Audio play prevented:', e);
+                            if (window.WaveEngine) window.WaveEngine.setSpeaking(false);
+                            this.triggerSystemResponse(`Hello, ${this.userName}. I am your VeriClaim assistant. Please describe the incident and any damage you are reporting today.`);
+                            setTimeout(() => { this.setupVAD(); }, 5000);
+                        });
+                    }
                 }
             });
         }
 
         // VAD (Voice Activity Detection) completely replaces the spacebar
         // The VAD is initialized in setupVAD() when the user starts the conversation.
-        
+
 
         const endBtn = document.getElementById('endSessionBtn');
         if (endBtn) {
@@ -192,7 +205,7 @@ class VoiceAgent {
                 if (!this.vad) return;
                 if (this.toggleMicBtn.classList.contains('muted')) {
                     this.vad.start();
-                    this.toggleMicBtn.classList.remove('muted');
+                    this.toggleMicBtn.classList.remove('muted');Y
                     this.updateVisLabel("Listening...");
                 } else {
                     this.vad.pause();
@@ -202,7 +215,7 @@ class VoiceAgent {
             });
         }
     }
-    
+
     async setupVAD() {
         if (typeof vad === 'undefined' || !vad.MicVAD) {
             console.warn("VAD library not loaded yet.");
@@ -216,7 +229,7 @@ class VoiceAgent {
             if (window.ort) {
                 window.ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
             }
-            
+
             this.vad = await vad.MicVAD.new({
                 workletURL: "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/vad.worklet.bundle.min.js",
                 modelURL: "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/silero_vad.onnx",
@@ -226,17 +239,17 @@ class VoiceAgent {
                     if (window.WaveEngine) window.WaveEngine.setListening(true);
                     this.updateVisLabel("Listening...");
                     if (this.toggleMicBtn) this.toggleMicBtn.classList.remove('muted');
-                    try { this.recognition.start(); } catch (err) {}
+                    try { this.recognition.start(); } catch (err) { }
                 },
                 onSpeechEnd: (audio) => {
                     if (this.isSpeaking || this.isProcessing) return;
                     this.isListening = false;
                     if (window.WaveEngine) window.WaveEngine.setListening(false);
                     if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
-                    
+
                     this.isVADProcessing = true;
-                    try { this.recognition.stop(); } catch (err) {}
-                    
+                    try { this.recognition.stop(); } catch (err) { }
+
                     // Wait a moment for final transcription results
                     setTimeout(() => {
                         const combined = (this.currentTranscript + ' ' + (this.interimTranscript || '')).trim();
@@ -261,16 +274,16 @@ class VoiceAgent {
             this.addSystemMsg("Microphone access was denied. Please allow microphone access in your browser settings and refresh the page.");
         }
     }
-    
+
     stopEverything() {
-        if(this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
+        if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
         if (this.synth) this.synth.cancel();
         // BUG FIX #8: Guard recognition.stop() the same way as in keyup
         if (this.recognition) {
             try { this.recognition.stop(); } catch (err) { /* already stopped */ }
         }
         if (this.vad) {
-            try { this.vad.destroy(); } catch(e) {}
+            try { this.vad.destroy(); } catch (e) { }
             this.vad = null;
         }
         this.isSpeaking = false;
@@ -293,25 +306,25 @@ class VoiceAgent {
             window.location.href = 'dashboard.html';
         }, 1500);
     }
-    
+
     setupWebSocket() {
         // BUG FIX #1 (continuation): this.user is now guaranteed to be set
         // before this method is called (called from init(), not constructor).
         const token = this.user ? this.user.token : '';
         const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
         this.ws = new WebSocket(`${wsProto}://${window.location.host}/ws/voice_agent?token=${token}`);
-        
+
         this.ws.onopen = () => {
             this.wsReconnectAttempts = 0;
             console.log("WebSocket connected.");
         };
 
         this.ws.onmessage = (event) => {
-            if(this.processingIndicator) {
+            if (this.processingIndicator) {
                 this.processingIndicator.classList.add('hidden');
                 this.processingIndicator.classList.remove('flex');
             }
-            
+
             try {
                 const data = JSON.parse(event.data);
                 if (data.text) {
@@ -321,7 +334,7 @@ class VoiceAgent {
                 console.error("Failed to parse WebSocket message:", err);
             }
         };
-        
+
         this.ws.onerror = (err) => {
             console.error("WebSocket error:", err);
             this.addSystemMsg("Connection to CrewAI backend failed.");
@@ -335,14 +348,14 @@ class VoiceAgent {
                 setTimeout(() => { window.location.href = 'home.html'; }, 2000);
                 return;
             }
-            
+
             // Don't reconnect if the session was intentionally ended
             if (this.wsReconnectAttempts >= this.wsMaxReconnects) return;
 
             const delay = Math.min(1000 * 2 ** this.wsReconnectAttempts, 16000);
             this.wsReconnectAttempts++;
             console.warn(`WebSocket closed (code ${event.code}). Reconnecting in ${delay}ms… (attempt ${this.wsReconnectAttempts}/${this.wsMaxReconnects})`);
-            
+
             // Clean Reconnect UI instead of spamming chat
             this.updateStatus(`Reconnecting... (${this.wsReconnectAttempts}/${this.wsMaxReconnects})`);
             if (this.toggleMicBtn) this.toggleMicBtn.classList.add('muted');
@@ -352,43 +365,43 @@ class VoiceAgent {
             }, delay);
         };
     }
-    
+
     processUserMessage(text) {
         this.isProcessing = true;
         if (window.WaveEngine) window.WaveEngine.setProcessing(true);
-        if(this.processingIndicator) {
+        if (this.processingIndicator) {
             this.processingIndicator.classList.remove('hidden');
             this.processingIndicator.classList.add('flex');
         }
         this.updateVisLabel("Processing");
-        
+
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({ text: text }));
         } else {
             // Reset processing state immediately since we're not waiting for a response
             this.isProcessing = false;
             if (window.WaveEngine) window.WaveEngine.setProcessing(false);
-            if(this.processingIndicator) {
+            if (this.processingIndicator) {
                 this.processingIndicator.classList.add('hidden');
                 this.processingIndicator.classList.remove('flex');
             }
             this.triggerSystemResponse("My connection to the backend is down. Please wait while I reconnect.");
         }
     }
-    
+
     processContextUpload(count) {
         // Send a real message to the backend so the crew knows images are ready
         const msg = `I have uploaded ${count || 'some'} evidence image(s) for my claim.`;
         this.addUserMsg(msg);
         this.processUserMessage(msg);
     }
-    
+
     triggerSystemResponse(text) {
         this.isProcessing = false;
         if (window.WaveEngine) window.WaveEngine.setProcessing(false);
         if (!this.synth) return;
-        
-        this.synth.cancel(); 
+
+        this.synth.cancel();
 
         // BUG FIX #10: Guard recognition.stop() — calling stop() when recognition
         // is already stopped or was never started throws InvalidStateError.
@@ -400,7 +413,7 @@ class VoiceAgent {
         this.isSpeaking = true; // Lock state early to prevent onend from resetting label prematurely
 
         const utterance = new SpeechSynthesisUtterance(text);
-        
+
         // Voices may not be loaded yet — use onvoiceschanged fallback
         const applyVoice = () => {
             const voices = this.synth.getVoices();
@@ -415,16 +428,16 @@ class VoiceAgent {
         } else {
             this.synth.onvoiceschanged = () => { applyVoice(); this.synth.onvoiceschanged = null; };
         }
-        
+
         utterance.lang = 'en-US';
-        utterance.rate = 0.95; 
-        
+        utterance.rate = 0.95;
+
         utterance.onstart = () => {
             this.addAiMsg(text);
             if (window.WaveEngine) window.WaveEngine.setSpeaking(true);
             this.updateVisLabel("Speaking");
         };
-        
+
         utterance.onend = () => {
             this.isSpeaking = false;
             if (window.WaveEngine) window.WaveEngine.setSpeaking(false);
@@ -446,10 +459,10 @@ class VoiceAgent {
                 this.startRecognitionSession();
             }
         };
-        
+
         this.synth.speak(utterance);
     }
-    
+
     updateStatus(text) {
         if (this.statusText) this.statusText.innerText = text;
     }
@@ -463,7 +476,7 @@ class VoiceAgent {
             }, 300);
         }
     }
-    
+
     // UPDATED TEXT SIZES & THEME SUPPORT
     addAiMsg(text) {
         if (!this.transcriptArea) return;

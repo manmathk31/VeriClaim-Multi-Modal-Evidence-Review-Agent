@@ -31,6 +31,8 @@ function init3DTiltCards() {
     const tiltCards = document.querySelectorAll('.tilt-card');
     
     tiltCards.forEach(card => {
+        card.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+        
         card.addEventListener('mousemove', (e) => {
             const rect = card.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -48,11 +50,6 @@ function init3DTiltCards() {
         
         card.addEventListener('mouseleave', () => {
             card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-            card.style.transition = 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
-        });
-        
-        card.addEventListener('mouseenter', () => {
-            card.style.transition = 'none';
         });
     });
 }
