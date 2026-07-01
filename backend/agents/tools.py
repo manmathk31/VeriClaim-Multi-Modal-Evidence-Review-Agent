@@ -1,6 +1,33 @@
 import os
 import json
+import time
+import random
 from crewai.tools import tool
+
+# ==========================================
+# RETRY HELPER FOR API QUOTA LIMITS
+# ==========================================
+def retry_with_backoff(fn, *args, max_retries=5, initial_delay=2.0, backoff_factor=2.0, **kwargs):
+    """
+    Retries a function call if it fails due to a 429 Rate Limit/Resource Exhausted error.
+    Uses exponential backoff with jitter.
+    """
+    delay = initial_delay
+    for i in range(max_retries):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str or "rate limit" in err_str:
+                if i == max_retries - 1:
+                    print(f"[RETRY] Max retries reached ({max_retries}). Failing with exception: {e}")
+                    raise e
+                sleep_time = delay + random.uniform(0.1, 1.0)
+                print(f"[RETRY] 429 Rate limited/Quota exceeded. Retrying in {sleep_time:.2f}s (Attempt {i+1}/{max_retries})...")
+                time.sleep(sleep_time)
+                delay *= backoff_factor
+            else:
+                raise e
 
 # ==========================================
 # DEPENDENCY INJECTION
@@ -88,8 +115,10 @@ def analyze_image(image_path: str, context: str) -> str:
             img = Image.open(image_path)
 
         context_safe = context.replace('"""', "''").replace("\\", "")[:500]
-        response = model.generate_content([
-            f"""You are a senior forensic image analyst working for an insurance company's fraud prevention unit.
+        
+        def make_call():
+            return model.generate_content([
+                f"""You are a senior forensic image analyst working for an insurance company's fraud prevention unit.
 Analyze this image with extreme scrutiny.
 
 The claimant's verbal description of the incident: "{context_safe}"
@@ -115,9 +144,10 @@ Look specifically for:
 - Whether the type and pattern of damage is consistent with the claimed event
 - Age indicators — rust, dust, worn edges around supposedly "fresh" damage
 - Any mismatch between the claimed item and what is actually shown""",
-            img
-        ])
-
+                img
+            ])
+            
+        response = retry_with_backoff(make_call)
         return response.text
 
     except Exception as e:

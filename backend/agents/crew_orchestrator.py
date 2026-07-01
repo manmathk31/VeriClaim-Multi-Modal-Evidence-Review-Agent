@@ -1,10 +1,34 @@
 import os
+import time
+import random
 from crewai import Agent, Task, Crew, Process
 from crewai.memory.unified_memory import Memory
 from .tools import (
     lookup_policy, analyze_image, send_user_update,
     get_claim_history, save_claim_verdict, check_claim_status
 )
+
+def retry_with_backoff(fn, *args, max_retries=5, initial_delay=2.0, backoff_factor=2.0, **kwargs):
+    """
+    Retries a function call if it fails due to a 429 Rate Limit/Resource Exhausted error.
+    Uses exponential backoff with jitter.
+    """
+    delay = initial_delay
+    for i in range(max_retries):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str or "rate limit" in err_str:
+                if i == max_retries - 1:
+                    print(f"[RETRY] Max retries reached ({max_retries}). Failing with exception: {e}")
+                    raise e
+                sleep_time = delay + random.uniform(0.1, 1.0)
+                print(f"[RETRY] 429 Rate limited/Quota exceeded. Retrying in {sleep_time:.2f}s (Attempt {i+1}/{max_retries})...")
+                time.sleep(sleep_time)
+                delay *= backoff_factor
+            else:
+                raise e
 
 # ==========================================
 # VERICLAIM CREW AI ORCHESTRATOR
@@ -85,9 +109,16 @@ class VeriClaimCrew:
                 "Extract the core claim story when complete."
             ),
             backstory=(
-                "You are the friendly, empathetic frontline AI for VeriClaim Insurance. "
-                "You guide users through the claims process with warmth and professionalism. "
+                "You are the friendly, professional frontline AI for VeriClaim Insurance. "
+                "You were built and created by MK Industries. "
+                "If the user asks about who created you, who built you, what you are, or details about the VeriClaim platform, "
+                "you must respectfully and proudly mention that you and the VeriClaim platform were created by MK Industries. "
+                "However, if the user asks specifically for the creator's name (or details about who 'MK' is), you must state exactly: "
+                "'I am created by MK, and I am not permitted or allowed to disclose his full name.' "
+                "You guide users through the claims process with natural warmth, intelligence, and professionalism. "
                 "You NEVER promise a payout or specific amount. "
+                "To remain human-like and smart, you avoid repeating robotic expressions of sympathy, over-apologizing, or writing long-winded paragraphs. "
+                "Instead, you speak in a naturally concise, direct, and conversational tone while maintaining high analytical intelligence. "
                 "You remember everything the user has said across the entire conversation. "
                 "When the story is complete (what device, what happened, when), you summarize "
                 "it clearly for the backend agents."
@@ -221,11 +252,14 @@ class VeriClaimCrew:
             
             text = "\n".join([f"{'USER' if t['role'] == 'user' else 'AI AGENT'}: {t['content']}" for t in conversation_prefix])
             
-            resp = model.generate_content(
-                f"Please write a highly detailed, dense summary of this chat history. "
-                f"Extract every mentioned fact (names, objects, timestamps, damage descriptions, feelings). "
-                f"Keep it concise. \n\n{text}"
-            )
+            def make_call():
+                return model.generate_content(
+                    f"Please write a highly detailed, dense summary of this chat history. "
+                    f"Extract every mentioned fact (names, objects, timestamps, damage descriptions, feelings). "
+                    f"Keep it concise. \n\n{text}"
+                )
+                
+            resp = retry_with_backoff(make_call)
             return resp.text.strip()
         except Exception as e:
             print(f"[CACHE] Fallback: Failed to summarize prefix: {e}")
@@ -286,17 +320,16 @@ class VeriClaimCrew:
                 f"--- END ---\n\n"
                 f"Your job:\n"
                 f"1. Read the ENTIRE provided text (including the summary if present), not just the last message.\n"
-                f"2. You MUST build rapport and sound like a friendly, empathetic human customer service agent. "
-                f"Express sympathy if an item is damaged.\n"
-                f"3. Ask clarifying follow-up questions to gather more context. "
-                f"Do not rush to finish. Ensure you know the device, exactly what happened, when, and the severity.\n"
-                f"4. Evidence Check: Has the user uploaded evidence photos? Currently, uploaded_photos={has_images}. "
+                f"2. Be naturally warm and professional. Avoid repeating robotic expressions of sympathy or over-apologizing on every turn. Only express concern or sympathy when the user first describes the incident, then focus on practical help.\n"
+                f"3. Speak in a naturally concise, conversational, and direct manner, like a real human customer service representative. Do not add unnecessary padding, pleasantries, or long paragraphs, but do not sacrifice intelligence or logic.\n"
+                f"4. Ask clarifying follow-up questions to gather more context. Do not rush to finish. Ensure you know the device, exactly what happened, when, and the severity.\n"
+                f"5. Evidence Check: Has the user uploaded evidence photos? Currently, uploaded_photos={has_images}. "
                 f"If they haven't uploaded photos, you must eventually get them, BUT do not demand them repeatedly.\n"
-                f"5. SOCIAL INTELLIGENCE: Be highly socially aware. Mimic a real human conversation. "
+                f"6. SOCIAL INTELLIGENCE: Be highly socially aware. Mimic a real human conversation. "
                 f"If the user says 'give me a minute' or asks a quick side question, just acknowledge it naturally without appending a demand for more details or photos. Do NOT relentlessly ask for missing information on every single turn.\n"
-                f"6. If the story is NOT complete OR they haven't uploaded photos yet, "
+                f"7. If the story is NOT complete OR they haven't uploaded photos yet, "
                 f"output EXACTLY starting with 'INCOMPLETE:' followed by your natural, conversational reply.\n"
-                f"7. ONLY if the story is fully complete AND they have provided photos (if applicable), "
+                f"8. ONLY if the story is fully complete AND they have provided photos (if applicable), "
                 f"output EXACTLY starting with 'COMPLETE:' followed by a structured summary:\n"
                 f"   • Device/Item: ...\n"
                 f"   • What happened: ...\n"
@@ -315,7 +348,8 @@ class VeriClaimCrew:
             agents=[orchestrator],
             tasks=[t1],
             verbose=False,
-            memory=self.create_memory(user_id),
+            # memory=self.create_memory(user_id), # Temporarily disabled to avoid heavy 429 quota limits on Memory Save
+            memory=False,
             max_rpm=10
         )
         t1_result = str(phase1_crew.kickoff()).strip()
@@ -356,6 +390,13 @@ class VeriClaimCrew:
             goal="Answer the customer's follow up questions regarding their claim status accurately and politely.",
             backstory=(
                 "You are the VeriClaim Post-Claim Support Specialist. "
+                "You were built and created by MK Industries. "
+                "If the customer asks who created you or details about the VeriClaim platform, "
+                "respectfully and proudly mention that you and the VeriClaim platform were created by MK Industries. "
+                "However, if the customer asks specifically for the creator's name (or details about who 'MK' is), you must state exactly: "
+                "'I am created by MK, and I am not permitted or allowed to disclose his full name.' "
+                "You answer customer questions with natural warmth, intelligence, and professional conciseness. "
+                "You do not write long-winded paragraphs, repeat expressions of sympathy, or over-apologize. "
                 "The customer has already successfully submitted their claim earlier in this conversation, "
                 "and it is currently being processed (or has been processed) by the backend assessment team. "
                 "You have access to the Check Claim Status Tool to look up real-time database results."
@@ -376,7 +417,7 @@ class VeriClaimCrew:
                 f"1. You MUST use the `check_claim_status` tool with user_id={user_id} to get the latest verdict and reasoning from the database.\n"
                 f"2. Formulate a friendly, natural-sounding reply answering their question.\n"
                 f"3. Do NOT repeat the hardcoded message 'I have submitted your claim for review...'\n"
-                f"4. CRITICAL RULE: Keep your response extremely short and conversational (1 to 2 sentences max), just like a real human on the phone."
+                f"4. Speak in a naturally concise, conversational, and direct manner, like a real human representative on the phone. Answer the question directly with clarity, avoiding unnecessary pleasantries, robotic apologies, or fluff."
             ),
             expected_output="A polite, conversational reply explaining the status/verdict to the user.",
             agent=support_agent
@@ -386,7 +427,8 @@ class VeriClaimCrew:
             agents=[support_agent],
             tasks=[t1],
             verbose=False,
-            memory=self.create_memory(user_id),
+            # memory=self.create_memory(user_id), # Temporarily disabled to avoid heavy 429 quota limits on Memory Save
+            memory=False,
             max_rpm=10
         )
         
@@ -517,7 +559,8 @@ class VeriClaimCrew:
             tasks=backend_tasks,
             process=Process.hierarchical,
             manager_llm=self.manager_llm,
-            memory=self.create_memory(user_id),
+            # memory=self.create_memory(user_id), # Temporarily disabled to avoid heavy 429 quota limits on Memory Save
+            memory=False,
             verbose=True,
             max_rpm=2  # Intentionally very slow (2 requests per min) to simulate natural review and completely avoid API rate limits
         )

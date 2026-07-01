@@ -499,8 +499,27 @@ class VoiceAgent {
         const applyVoice = () => {
             const voices = this.synth.getVoices();
             const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-            let preferredVoice = englishVoices.find(v => v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural'));
-            if (!preferredVoice && englishVoices.length > 0) preferredVoice = englishVoices[0];
+            
+            // Prioritize common English male voice names across different platforms/browsers
+            const maleVoiceKeywords = [
+                'david', 'mark', 'george', 'ravi', 'james', 'richard', 'sean', 'benjamin', 
+                'daniel', 'fred', 'alex', 'bruce', 'ralph', 'albert', 'nicky', 'guy', 
+                'thomas', 'liam', 'connor', 'andrew', 'brian', 'ryan', 'oliver', 'mitch', 'male'
+            ];
+            
+            let preferredVoice = englishVoices.find(v => {
+                const nameLower = v.name.toLowerCase();
+                return maleVoiceKeywords.some(keyword => nameLower.includes(keyword));
+            });
+            
+            // Fallback to Google/Natural/Samantha/First English voice if no male voice is matched
+            if (!preferredVoice) {
+                preferredVoice = englishVoices.find(v => v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural'));
+            }
+            if (!preferredVoice && englishVoices.length > 0) {
+                preferredVoice = englishVoices[0];
+            }
+            
             if (preferredVoice) utterance.voice = preferredVoice;
         };
 
