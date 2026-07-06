@@ -511,6 +511,14 @@ class VoiceAgent {
                     utterance.lang = 'mr-IN';
                     return;
                 }
+                // Fallback to Hindi voice for Devanagari rendering if no native Marathi voice package is installed
+                const hindiVoices = voices.filter(v => v.lang.startsWith('hi') || v.lang.includes('Hindi'));
+                if (hindiVoices.length > 0) {
+                    console.warn("[TTS] Native Marathi voice not found. Falling back to Hindi Devanagari voice.");
+                    utterance.voice = hindiVoices[0];
+                    utterance.lang = 'hi-IN';
+                    return;
+                }
             } else if (langCode === 'hi') {
                 const hindiVoices = voices.filter(v => v.lang.startsWith('hi') || v.lang.includes('Hindi'));
                 if (hindiVoices.length > 0) {
@@ -522,21 +530,20 @@ class VoiceAgent {
             
             const englishVoices = voices.filter(v => v.lang.startsWith('en'));
             
-            // Prioritize common English male voice names across different platforms/browsers
-            const maleVoiceKeywords = [
-                'david', 'mark', 'george', 'ravi', 'james', 'richard', 'sean', 'benjamin', 
-                'daniel', 'fred', 'alex', 'bruce', 'ralph', 'albert', 'nicky', 'guy', 
-                'thomas', 'liam', 'connor', 'andrew', 'brian', 'ryan', 'oliver', 'mitch', 'male'
+            // Prioritize common English female voice names across different platforms/browsers (like Samantha, Google US English, etc.)
+            const femaleVoiceKeywords = [
+                'samantha', 'zira', 'hazel', 'susan', 'karen', 'moira', 'tessa', 'victoria', 
+                'female', 'google us english'
             ];
             
             let preferredVoice = englishVoices.find(v => {
                 const nameLower = v.name.toLowerCase();
-                return maleVoiceKeywords.some(keyword => nameLower.includes(keyword));
+                return femaleVoiceKeywords.some(keyword => nameLower.includes(keyword));
             });
             
-            // Fallback to Google/Natural/Samantha/First English voice if no male voice is matched
+            // Fallback to Google/Natural/First English voice if no female voice is matched
             if (!preferredVoice) {
-                preferredVoice = englishVoices.find(v => v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural'));
+                preferredVoice = englishVoices.find(v => v.name.includes('Google') || v.name.includes('Natural'));
             }
             if (!preferredVoice && englishVoices.length > 0) {
                 preferredVoice = englishVoices[0];
