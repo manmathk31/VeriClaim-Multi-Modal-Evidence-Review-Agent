@@ -149,6 +149,59 @@ def verify_user_token(token: str) -> Optional[str]:
     return None
 
 
+def translate_text(text: str, target_lang: str) -> str:
+    """
+    Translates text to either English, Marathi, or Hindi using Gemini.
+    target_lang can be: 'en', 'mr', 'hi'.
+    """
+    if not text.strip() or (target_lang == "en" and all(ord(c) < 128 for c in text)):
+        # Already English/ASCII, no need to translate
+        return text
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+        
+        lang_names = {'en': 'English', 'mr': 'Marathi', 'hi': 'Hindi'}
+        target_lang_name = lang_names.get(target_lang, 'English')
+        
+        prompt = (
+            f"You are a professional, high-fidelity translator. Translate the following text to {target_lang_name}. "
+            "Only return the direct translation. Do not write explanations, greetings, or notes. Keep formatting, context, names, and numbers exactly the same.\n\n"
+            f"Text to translate:\n{text}"
+        )
+        response = model.generate_content(prompt)
+        if response and response.text:
+            return response.text.strip()
+    except Exception as e:
+        print(f"[TRANSLATE] Error translating to {target_lang}: {e}")
+    return text
+
+
+def translate_to_english_if_needed(text: str) -> str:
+    """Detects language and translates to English if the text is not English."""
+    if not text.strip() or all(ord(c) < 128 for c in text):
+        # Already ASCII (likely English), skip
+        return text
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+        prompt = (
+            "Detect the language of the following text. If it is already in English, return it exactly as-is without any modification. "
+            "If it is in another language (such as Marathi or Hindi), translate it professionally to English. "
+            "Only return the final English text (or the original text if it was already English). Do not include any explanations or extra words.\n\n"
+            f"Text:\n{text}"
+        )
+        response = model.generate_content(prompt)
+        if response and response.text:
+            return response.text.strip()
+    except Exception as e:
+        print(f"[TRANSLATE-EN] Error: {e}")
+    return text
+
+
+
 # ==========================================
 # CONNECTION MANAGER
 # ==========================================
@@ -628,25 +681,44 @@ async def websocket_voice_agent(websocket: WebSocket, token: str = Query(None)):
     # Get or create the user's session (loads from DB if exists, creates if new)
     session = session_manager.get_or_create_session(user_id)
 
+    # Rebuild parallel English conversation cache if not present
+    if "english_conversation" not in session:
+        session["english_conversation"] = []
+        for msg in session.get("conversation", []):
+            role = msg["role"]
+            content = msg["content"]
+            # Translate message content to English if it's not English
+            english_content = translate_to_english_if_needed(content)
+            session["english_conversation"].append({"role": role, "content": english_content})
+
     try:
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
             user_text = message.get("text", "")
+            lang = message.get("lang", "en")  # 'en' | 'mr' | 'hi'
 
             if not user_text.strip():
                 continue
 
             user_text = html.escape(user_text.strip())
 
-            # ── Persist user message to cache + DB ──
+            # ── Persist original language user message to cache + DB (for UI) ──
             session_manager.append_message(user_id, "user", user_text)
 
-            # Broadcast user message to admin dashboard
+            # Translate user message to English for backend agents if lang is not English
+            english_user_text = user_text
+            if lang != "en":
+                english_user_text = translate_text(user_text, "en")
+
+            # Append English user message to parallel English cache
+            session["english_conversation"].append({"role": "user", "content": english_user_text})
+
+            # Broadcast original message to admin dashboard
             await manager.broadcast_to_admins(json.dumps({
                 "type": "log",
                 "agent": "User",
-                "message": user_text
+                "message": f"[{lang.upper()}] {user_text}" if lang != "en" else user_text
             }))
 
             # Broadcast pipeline initialization to admins
@@ -678,7 +750,7 @@ async def websocket_voice_agent(websocket: WebSocket, token: str = Query(None)):
                         None,
                         crew_system.process_post_claim,
                         user_id,
-                        list(session["conversation"])
+                        list(session["english_conversation"])  # Pass English conversation history
                     )
                 else:
                     # Standard Interviewer flow
@@ -686,8 +758,8 @@ async def websocket_voice_agent(websocket: WebSocket, token: str = Query(None)):
                         None,
                         crew_system.process_live_claim,
                         user_id,
-                        list(session["conversation"]),  # Full conversation history
-                        list(session["images"])         # All uploaded image paths
+                        list(session["english_conversation"]),  # Pass English conversation history
+                        list(session["images"])
                     )
 
                     if not is_complete:
@@ -695,7 +767,7 @@ async def websocket_voice_agent(websocket: WebSocket, token: str = Query(None)):
                     else:
                         summary, response_text = payload
                         session_manager.mark_claim_submitted(user_id)  # Switch modes + persist to DB
-                        # Start backend processing asynchronously
+                        # Start backend processing asynchronously (English summary and images)
                         loop.run_in_executor(
                             None,
                             crew_system.run_backend_processing,
@@ -714,19 +786,26 @@ async def websocket_voice_agent(websocket: WebSocket, token: str = Query(None)):
                 else:
                     response_text = f"I encountered an issue processing your claim. Please try again. (Error: {error_msg[:100]})"
 
+            # Translate final response back to user's selected language if not English
+            response_text_target = response_text
+            if lang != "en":
+                response_text_target = translate_text(response_text, lang)
 
-            # ── Persist AI response to cache + DB ──
-            session_manager.append_message(user_id, "ai", response_text)
+            # ── Persist target language AI response to cache + DB (for UI) ──
+            session_manager.append_message(user_id, "ai", response_text_target)
+
+            # Append English response to parallel English cache
+            session["english_conversation"].append({"role": "ai", "content": response_text})
 
             # Broadcast AI response to admin dashboard
             await manager.broadcast_to_admins(json.dumps({
                 "type": "log",
                 "agent": "Orchestrator",
-                "message": response_text
+                "message": f"[{lang.upper()}] {response_text_target}" if lang != "en" else response_text_target
             }))
 
             # Send response back to the user
-            await websocket.send_text(json.dumps({"text": response_text}))
+            await websocket.send_text(json.dumps({"text": response_text_target}))
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

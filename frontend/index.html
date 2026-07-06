@@ -37,6 +37,29 @@
             <button onclick="toggleTheme()" class="text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center" title="Toggle Light/Dark Mode">
                 <i class="fa-solid fa-sun" id="themeIcon"></i>
             </button>
+            <div class="w-px h-4 bg-slate-200 dark:bg-white/10"></div>
+            <!-- Language Selector Dropdown -->
+            <div class="relative inline-block text-left pointer-events-auto">
+                <button id="langSelectBtn" onclick="toggleLangDropdown()" class="text-[10px] sm:text-xs text-slate-500 dark:text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors uppercase tracking-[0.15em] flex items-center gap-1.5 focus:outline-none font-medium" title="Change Language">
+                    <i class="fa-solid fa-globe"></i> <span id="currentLangLabel">ENGLISH</span>
+                </button>
+                <div id="langDropdown" class="hidden absolute right-0 mt-2 w-32 glass-card rounded-xl border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 transform origin-top-right transition-all bg-white/95 dark:bg-[#0a0a0a]/95">
+                    <div class="py-1">
+                        <button onclick="setLanguage('en')" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-medium flex justify-between items-center">
+                            <span>English</span>
+                            <span id="check-en" class="text-cyan-500 dark:text-cyan-400 font-bold"><i class="fa-solid fa-check text-[10px]"></i></span>
+                        </button>
+                        <button onclick="setLanguage('mr')" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-medium flex justify-between items-center">
+                            <span>मराठी (MR)</span>
+                            <span id="check-mr" class="text-cyan-500 dark:text-cyan-400 font-bold hidden"><i class="fa-solid fa-check text-[10px]"></i></span>
+                        </button>
+                        <button onclick="setLanguage('hi')" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-medium flex justify-between items-center">
+                            <span>हिंदी (HI)</span>
+                            <span id="check-hi" class="text-cyan-500 dark:text-cyan-400 font-bold hidden"><i class="fa-solid fa-check text-[10px]"></i></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div class="w-px h-4 bg-slate-200 dark:bg-white/10 hidden sm:block"></div>
             <div id="userDisplay" class="hidden items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full px-2 sm:px-3 py-1 sm:py-1.5 backdrop-blur-md">
                 <div id="userAvatar" class="avatar-initial w-5 h-5 sm:w-6 sm:h-6 text-[10px]">U</div>

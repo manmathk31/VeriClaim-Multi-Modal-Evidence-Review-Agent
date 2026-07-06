@@ -15,6 +15,7 @@ class VoiceAgent {
         this.isHoldingSpace = false;
         this.isVADProcessing = false;
         this.isMutedByUser = false;
+        this.currentLanguage = 'en';
 
         // WebSocket reconnect state
         this.ws = null;
@@ -457,7 +458,10 @@ class VoiceAgent {
         this.updateVisLabel("Processing");
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ text: text }));
+            this.ws.send(JSON.stringify({ 
+                text: text,
+                lang: this.currentLanguage || 'en'
+            }));
         } else {
             // Reset processing state immediately since we're not waiting for a response
             this.isProcessing = false;
@@ -498,6 +502,24 @@ class VoiceAgent {
         // Voices may not be loaded yet — use onvoiceschanged fallback
         const applyVoice = () => {
             const voices = this.synth.getVoices();
+            const langCode = this.currentLanguage || 'en';
+            
+            if (langCode === 'mr') {
+                const marathiVoices = voices.filter(v => v.lang.startsWith('mr') || v.lang.includes('Marathi'));
+                if (marathiVoices.length > 0) {
+                    utterance.voice = marathiVoices[0];
+                    utterance.lang = 'mr-IN';
+                    return;
+                }
+            } else if (langCode === 'hi') {
+                const hindiVoices = voices.filter(v => v.lang.startsWith('hi') || v.lang.includes('Hindi'));
+                if (hindiVoices.length > 0) {
+                    utterance.voice = hindiVoices[0];
+                    utterance.lang = 'hi-IN';
+                    return;
+                }
+            }
+            
             const englishVoices = voices.filter(v => v.lang.startsWith('en'));
             
             // Prioritize common English male voice names across different platforms/browsers
@@ -520,7 +542,12 @@ class VoiceAgent {
                 preferredVoice = englishVoices[0];
             }
             
-            if (preferredVoice) utterance.voice = preferredVoice;
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                utterance.lang = preferredVoice.lang || 'en-US';
+            } else {
+                utterance.lang = 'en-US';
+            }
         };
 
         if (this.synth.getVoices().length > 0) {
@@ -529,7 +556,6 @@ class VoiceAgent {
             this.synth.onvoiceschanged = () => { applyVoice(); this.synth.onvoiceschanged = null; };
         }
 
-        utterance.lang = 'en-US';
         utterance.rate = 0.95;
 
         utterance.onstart = () => {
@@ -632,3 +658,58 @@ class VoiceAgent {
 setTimeout(() => {
     window.VoiceAgent = new VoiceAgent();
 }, 500);
+
+
+// Expose multilingual controls globally
+window.toggleLangDropdown = () => {
+    const dropdown = document.getElementById('langDropdown');
+    if (dropdown) dropdown.classList.toggle('hidden');
+};
+
+window.setLanguage = (lang) => {
+    if (window.VoiceAgent) {
+        window.VoiceAgent.currentLanguage = lang;
+        
+        // Update UI labels
+        const labelMap = { 'en': 'ENGLISH', 'mr': 'मराठी (MR)', 'hi': 'हिंदी (HI)' };
+        const labelEl = document.getElementById('currentLangLabel');
+        if (labelEl) labelEl.innerText = labelMap[lang] || lang.toUpperCase();
+        
+        // Update active checkmarks
+        ['en', 'mr', 'hi'].forEach(l => {
+            const check = document.getElementById(`check-${l}`);
+            if (check) {
+                if (l === lang) check.classList.remove('hidden');
+                else check.classList.add('hidden');
+            }
+        });
+        
+        // Close dropdown
+        const dropdown = document.getElementById('langDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+        
+        // Reconfigure speech recognition language code
+        if (window.VoiceAgent.recognition) {
+            const langCodes = { 'en': 'en-US', 'mr': 'mr-IN', 'hi': 'hi-IN' };
+            window.VoiceAgent.recognition.lang = langCodes[lang] || 'en-US';
+            
+            // If currently listening, restart to apply new language
+            if (window.VoiceAgent.isListening) {
+                try {
+                    window.VoiceAgent.recognition.stop();
+                    // Recognition will auto-restart in onend
+                } catch(e) {}
+            }
+        }
+        console.log("[LANG] Switched to:", lang);
+    }
+};
+
+// Close language dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('langDropdown');
+    const btn = document.getElementById('langSelectBtn');
+    if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
