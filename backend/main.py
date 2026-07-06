@@ -149,56 +149,49 @@ def verify_user_token(token: str) -> Optional[str]:
     return None
 
 
-def translate_text(text: str, target_lang: str) -> str:
+def translate_free(text: str, target_lang: str) -> str:
     """
-    Translates text to either English, Marathi, or Hindi using Gemini.
+    Translates text using Google's free translation endpoint via urllib.
     target_lang can be: 'en', 'mr', 'hi'.
     """
     if not text.strip() or (target_lang == "en" and all(ord(c) < 128 for c in text)):
-        # Already English/ASCII, no need to translate
         return text
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+        import urllib.request
+        import urllib.parse
+        import json
         
-        lang_names = {'en': 'English', 'mr': 'Marathi', 'hi': 'Hindi'}
-        target_lang_name = lang_names.get(target_lang, 'English')
+        encoded_text = urllib.parse.quote(text)
+        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={target_lang}&dt=t&q={encoded_text}"
         
-        prompt = (
-            f"You are a professional, high-fidelity translator. Translate the following text to {target_lang_name}. "
-            "Only return the direct translation. Do not write explanations, greetings, or notes. Keep formatting, context, names, and numbers exactly the same.\n\n"
-            f"Text to translate:\n{text}"
+        # Google Translate gtx client expects a User-Agent
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
-        response = model.generate_content(prompt)
-        if response and response.text:
-            return response.text.strip()
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html = response.read().decode('utf-8')
+            data = json.loads(html)
+            
+            translations = []
+            if data and isinstance(data, list) and len(data) > 0:
+                for part in data[0]:
+                    if part and isinstance(part, list) and len(part) > 0:
+                        translations.append(part[0])
+            if translations:
+                return "".join(translations)
     except Exception as e:
-        print(f"[TRANSLATE] Error translating to {target_lang}: {e}")
+        print(f"[FREE-TRANSLATE] Error: {e}")
     return text
+
+
+def translate_text(text: str, target_lang: str) -> str:
+    return translate_free(text, target_lang)
 
 
 def translate_to_english_if_needed(text: str) -> str:
-    """Detects language and translates to English if the text is not English."""
-    if not text.strip() or all(ord(c) < 128 for c in text):
-        # Already ASCII (likely English), skip
-        return text
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-3.1-flash-lite")
-        prompt = (
-            "Detect the language of the following text. If it is already in English, return it exactly as-is without any modification. "
-            "If it is in another language (such as Marathi or Hindi), translate it professionally to English. "
-            "Only return the final English text (or the original text if it was already English). Do not include any explanations or extra words.\n\n"
-            f"Text:\n{text}"
-        )
-        response = model.generate_content(prompt)
-        if response and response.text:
-            return response.text.strip()
-    except Exception as e:
-        print(f"[TRANSLATE-EN] Error: {e}")
-    return text
+    return translate_free(text, "en")
 
 
 
